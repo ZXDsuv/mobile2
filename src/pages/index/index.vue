@@ -16,7 +16,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 //com
 import CustomUserStatus from '@/components/CustomUserStatus/index.vue';
 
@@ -37,6 +37,16 @@ const calcScrollHeight = () => {
 
 onMounted(() => {
   calcScrollHeight();
+
+  // 监听窗口变化
+  uni.onWindowResize(() => {
+    calcScrollHeight();
+  });
+})
+
+// 销毁时移除监听
+onUnmounted(() => {
+  uni.offWindowResize(calcScrollHeight);
 })
 
 </script>
