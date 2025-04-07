@@ -15,9 +15,11 @@ export default defineConfig({
           unitToConvert: "px",
           viewportWidth: 1920,
           unitPrecision: 5,
-          propList: ["width", "padding"], // 只转换 width/height
+          propList: ["width", "padding", "min-width"], // 只转换 width/height
           viewportUnit: "vw",
           selectorBlackList: ["ignore-vw"],
+          // 不进行转换的类名
+
           minPixelValue: 1,
           mediaQuery: false,
           replace: true,
@@ -31,7 +33,7 @@ export default defineConfig({
             unitPrecision: 5,
             propList: ["height", "min-height", "line-height", "row-gap", "column-gap", "margin-top"], // 只转换 height
             viewportUnit: "vh",
-            selectorBlackList: ["ignore-vh"],
+            selectorBlackList: ['ignore-vh', 'ignore-vh-*'],
             minPixelValue: 1,
             mediaQuery: false,
             replace: true,

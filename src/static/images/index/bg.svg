@@ -1,0 +1,26 @@
+<svg width="1920" height="1080" viewBox="0 0 1920 1080" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g opacity="0.15">
+<g clip-path="url(#clip0_7201_10992)">
+<rect opacity="0.17" x="2087.5" y="-239.081" width="604" height="1193.18" transform="rotate(45 2087.5 -239.081)" fill="url(#paint0_radial_7201_10992)"/>
+<rect opacity="0.17" x="-248" y="-82.9075" width="604" height="1354" transform="rotate(-45 -248 -82.9075)" fill="url(#paint1_radial_7201_10992)"/>
+<rect opacity="0.17" x="2514.6" y="957.422" width="604" height="1692.11" transform="rotate(135 2514.6 957.422)" fill="url(#paint2_radial_7201_10992)"/>
+</g>
+</g>
+<defs>
+<radialGradient id="paint0_radial_7201_10992" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(2128.22 53.367) rotate(94.2595) scale(357.014 291.15)">
+<stop stop-color="white"/>
+<stop offset="1" stop-color="white" stop-opacity="0"/>
+</radialGradient>
+<radialGradient id="paint1_radial_7201_10992" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(-248 431.592) scale(841 777.67)">
+<stop stop-color="white"/>
+<stop offset="1" stop-color="white" stop-opacity="0"/>
+</radialGradient>
+<radialGradient id="paint2_radial_7201_10992" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(3126.72 1621.05) rotate(-177.716) scale(736.33 850.906)">
+<stop stop-color="white"/>
+<stop offset="1" stop-color="white" stop-opacity="0"/>
+</radialGradient>
+<clipPath id="clip0_7201_10992">
+<rect width="1920" height="1200" fill="white"/>
+</clipPath>
+</defs>
+</svg>

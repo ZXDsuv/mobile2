@@ -1,5 +1,5 @@
 <template>
-    <Layout>
+    <LayoutCom>
         <view class="login-page-container">
             <!-- logo -->
             <view class="login-header">
@@ -23,7 +23,7 @@
                     </view>
 
                 </view>
-                <view class="form-btn">
+                <view class="form-btn" @click="goIndexPage">
                     登录
                 </view>
             </view>
@@ -34,7 +34,7 @@
             </view>
 
         </view>
-    </Layout>
+    </LayoutCom>
     <!-- 提示绑定桌台 -->
     <CustomDialog ref="customPopup" title="信息">
         <view class="bind-table">
@@ -99,7 +99,6 @@ import {
     reactive,
     ref
 } from "vue";
-import Layout from "@/components/Layout.vue"
 import CustomDialog from "@/components/CustomDialog/index.vue"
 const customPopup = ref(null);
 const customPopup2 = ref(null);
@@ -150,6 +149,12 @@ onMounted(() => {
     if (customPopup5.value) {
     }
 }) 
+
+const goIndexPage = () => {
+    uni.navigateTo({
+        url: '/pages/index/index'
+    }) 
+}
 </script>
 
 <style lang="scss" scoped>

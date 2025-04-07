@@ -1,48 +1,135 @@
 <template>
-  <view class="content">
-    <image class="logo" src="/static/logo.png"></image>
-    <view class="text-area">
-      <text class="title">{{ title }}</text>
+  <LayoutCom>
+    <view class="index-page-container">
+      <view class="header-layout ignore-vh-header" id="header-layout">
+        <text class="text-1 view-layout">百家乐119号桌子</text>
+        <view class="view-1 view-layout"><text class="text-2">铺</text><text class="text-1">12</text></view>
+        <view class="view-1 view-layout"><text class="text-2">靴</text><text class="text-1">5</text></view>
+      </view>
+      <!-- 用户下注情况 -->
+      <view class="scroll-area" id="scroll-area" :style="{'height': scrollHeight + 'px'}">
+        <CustomUserStatus></CustomUserStatus>
+      </view>
     </view>
-  </view>
+  </LayoutCom>
+
 </template>
 
-<script>
-export default {
-  data() {
-    return {
-      title: 'Hello',
-    }
-  },
-  onLoad() {},
-  methods: {},
+<script setup>
+import { ref, onMounted } from 'vue';
+//com
+import CustomUserStatus from '@/components/CustomUserStatus/index.vue';
+
+const scrollHeight = ref(0); // 滚动高度
+
+const calcScrollHeight = () => {
+  const windowHeight = uni.getSystemInfoSync().windowHeight;
+  const query = uni.createSelectorQuery();
+  query.select('#header-layout').boundingClientRect();
+  query.select('#scroll-area').boundingClientRect();
+
+  query.exec(res => {
+    const headerHeight = res[0]?.height || 0;
+
+    scrollHeight.value = windowHeight - headerHeight;
+  });
 }
+
+onMounted(() => {
+  calcScrollHeight();
+})
+
 </script>
 
-<style>
-.content {
+<style lang="scss" scoped>
+.index-page-container {
+  width: 100%;
+  height: 100%;
+  background-image: url('@/static/images/index/logo.svg'), url('@/static/images/index/bg.svg');
+  background-repeat: no-repeat, no-repeat;
+  background-position: center center, center center;
+  background-size: 25%, cover;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
 
-.logo {
-  height: 200rpx;
-  width: 200rpx;
-  margin-top: 200rpx;
-  margin-left: auto;
-  margin-right: auto;
-  margin-bottom: 50rpx;
-}
+  .header-layout {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 54px;
+    width: 100vw;
+    background:
+      linear-gradient(180deg, rgba(22, 16, 9, 1) 0%, rgba(22, 16, 9, 1) 20%, #ecdecf 50%, rgba(22, 16, 9, 1) 80%, rgba(22, 16, 9, 1) 100%),
+      radial-gradient(circle at 50% 50%, #8d7d4a 0%, #000000 100%);
+    background-blend-mode: multiply;
+    position: relative;
 
-.text-area {
-  display: flex;
-  justify-content: center;
-}
+    &::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 8px;
+      /* 核心实现 */
+      background: radial-gradient(circle at 50% 50%,
+          #8e8a84 50%, #000000 70%);
+      /* 边缘透明 */
+      -webkit-mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+      mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      padding: 1px;
+      /* 边框厚度 */
+    }
 
-.title {
-  font-size: 36rpx;
-  color: #8f8f94;
+    .view-layout {
+      min-width: 280px;
+    }
+
+    .view-1 {
+      display: grid;
+      gap: 20px;
+      grid-auto-flow: column;
+      /* 横向流动 */
+      grid-auto-columns: max-content;
+      /* 子项根据自身内容决定宽度 */
+      justify-content: center;
+      /* 水平居中 */
+      align-items: center;
+      /* 垂直居中 */
+    }
+
+    .text-1 {
+      color: #D9C4B0;
+      text-align: center;
+      font-family: "PingFang SC";
+      font-size: 24px;
+      font-style: normal;
+      font-weight: 500;
+      line-height: normal;
+      text-transform: uppercase;
+    }
+
+    .text-2 {
+      color: #D9C4B0;
+      font-family: "PingFang SC";
+      font-size: 24px;
+      font-style: normal;
+      font-weight: 500;
+      line-height: normal;
+      text-transform: uppercase;
+    }
+  }
+
+  .ignore-vh-header {
+    flex-shrink: 0;
+  }
+
+  .scroll-area {
+    // height: calc(100% - 54px);
+  }
 }
 </style>
