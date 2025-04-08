@@ -30,8 +30,8 @@ const calcScrollHeight = () => {
 
   query.exec(res => {
     const headerHeight = res[0]?.height || 0;
-
-    scrollHeight.value = windowHeight - headerHeight;
+    const paddingBottomValue = 30
+    scrollHeight.value = windowHeight - headerHeight - 30;
   });
 }
 
