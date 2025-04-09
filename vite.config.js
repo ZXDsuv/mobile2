@@ -1,9 +1,19 @@
-import { defineConfig, loadEnv } from 'vite'
+import {
+  defineConfig,
+  loadEnv
+} from 'vite'
 import uni from '@dcloudio/vite-plugin-uni'
 import postcssPxToViewport from 'postcss-px-to-viewport-8-plugin'
 import postcssPxtorem from 'postcss-pxtorem'
+import vue from '@vitejs/plugin-vue'
+import path from 'path' // 需要安装 @types/node
 
-export default defineConfig(({ mode }) => {
+
+export default defineConfig(({
+  mode
+}) => {
+  console.log(loadEnv(mode, process.cwd()).VITE_BASE_URL);
+
   // 设定默认值为 1920×1080
   let viewportWidth = 1920
   let viewportHeight = 1080
@@ -18,6 +28,19 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [uni()],
+    base: './',
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, 'src'),
+        'socket.io-parser': require.resolve('socket.io-parser')
+      }
+    },
+    optimizeDeps: {
+      include: ['socket.io-client', 'socket.io-parser']
+    },
+    define: {
+      __BASE_URL__: JSON.stringify(process.env.BASE_URL || '/')
+    },
     css: {
       postcss: {
         plugins: [

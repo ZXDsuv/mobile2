@@ -1,12 +1,10 @@
 <template>
     <LayoutCom>
-        <view class="login-page-container">
-            <!-- logo -->
+        <!-- <view class="login-page-container">
             <view class="login-header">
                 <image src="/src/static/logo/logo.svg" />
                 <text>大西洋国际娱乐</text>
             </view>
-            <!-- 账号密码 -->
             <view class="login-content">
                 <view class="login-form">
                     <view class="title">账号</view>
@@ -22,18 +20,17 @@
                         <image class="eye" src="/src/static/logo/no.svg" v-else></image>
                     </view>
 
-                </view>
+                </view> 
                 <view class="form-btn" @click="goIndexPage">
                     登录
                 </view>
             </view>
-            <!-- 桌台信息 -->
             <view class="login-footer">
                 <text>当前桌台号：牛牛-15号桌</text>
                 <view class="debind">解绑桌台</view>
             </view>
 
-        </view>
+        </view> -->
     </LayoutCom>
     <!-- 提示绑定桌台 -->
     <CustomDialog ref="customPopup" title="信息">
@@ -42,22 +39,22 @@
             <text>需绑定桌台</text>
         </view>
         <template #footer>
-            <button class="confirm-btn common-flex" @click="confirm">去绑定</button>
+            <button class="confirm-btn common-flex" @click="goBindTable">去绑定</button>
         </template>
     </CustomDialog>
     <!-- 绑定桌台内容 -->
     <CustomDialog ref="customPopup2" title="绑定桌台" :width="1544">
         <view class="customPopup2-content">
             <view class="table-content">
-                <view class="select-table" :class="{ 'choose-table': item.choose }" v-for="(item, i) in tableList"
-                    :key="i">
+                <view @click="chooseGame(item.gameId)" class="select-table" :class="{ 'choose-table': item.choose }"
+                    v-for="(item, i) in gameList" :key="i">
                     {{ item.label }}
                 </view>
             </view>
 
             <view class="choose-content">
-                <view class="choose-item" :class="{ 'choosed': item.isChoosed }" v-for="(item, i) in chooseList"
-                    :key="i">
+                <view @click="chooseTable(item.id)" class="choose-item" :class="{ 'choosed': item.isChoosed }"
+                    v-for="(item, i) in chooseList" :key="i">
                     <view class="choose" :class="{ 'choosed-item': item.isChoosed }">
                         <image src="/static/logo/gou.svg" v-if="item.isChoosed" />
                         <view v-if="item.choose"></view>
@@ -67,7 +64,7 @@
             </view>
         </view>
         <template #footer>
-            <button class="confirm-btn2 common-flex" @click="confirm">确定</button>
+            <button class="confirm-btn2 common-flex" @click="confirmBindTable">确定</button>
         </template>
     </CustomDialog>
     <!-- 退出登录 -->
@@ -93,67 +90,181 @@
     </CustomDialog>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import {
     onMounted,
     reactive,
-    ref
+    ref,
+    nextTick
 } from "vue";
 import CustomDialog from "@/components/CustomDialog/index.vue"
+
+//api
+import { getTableList } from "@/request/index.js"
+
+// tool
+import { usePageParams } from "@/composables/usePageParams"
+// types
+import type { QueryParams } from "./types";
+// store
+import { useGameeStore } from "@/store"
+const { setTableInfo, getTableInfo } = useGameeStore();
+
 const customPopup = ref(null);
 const customPopup2 = ref(null);
 const customPopup3 = ref(null);
 const customPopup4 = ref(null);
 const customPopup5 = ref(null);
-const showPassword = ref(false); // 控制密码输入框的显示状态
+const showPassword = ref(false); // 控制密码输入框的显示状态 
+const { params, rawParams, resetParams } = usePageParams<QueryParams>({
+    defaultParams: {
+        type: 1, // 默认值为 1 1为初始化 2为切换绑定
+    },
+    converters: {
+        type: val => Number(val),
+        // id: val => Number(val),
+        // isAdmin: val => val === 'true' || val === '1',
+        // createdAt: val => new Date(val)
+    },
+    onParamsLoaded: (p) => {
+        console.log('参数加载完成:', p)
+        if (p.type === 2) { // 切换绑定
+            // 弹出绑定弹窗
+            openTableListPopup()
+        }
 
+    }
+})
 
-const tableList = reactive([
+const gameList = reactive([
     {
+        gameId: 1,
         label: '百家乐',
         value: '百家乐',
         choose: 1
     },
     {
+        gameId: 2,
         label: '德州扑克',
         value: '德州扑克'
     },
     {
+        gameId: 3,
         label: '龙虎斗',
         value: '龙虎斗'
     }
 ])
 const chooseList = reactive([
     {
+        id: 1,
         label: '百家乐-1号桌',
         value: '百家乐-1号桌',
         choose: 1
     },
     {
-        label: '百家乐-1号桌',
-        value: '百家乐-1号桌',
-        isChoosed: 1
-    }, {
-        label: '百家乐-1号桌',
-        value: '百家乐-1号桌',
-    }, {
-        label: '百家乐-1号桌',
-        value: '百家乐-1号桌',
-    }, {
-        label: '百家乐-1号桌',
-        value: '百家乐-1号桌',
+        id: 2,
+        label: '百家乐-2号桌',
+        value: '百家乐-2号桌',
+        // isChoosed: 1
+    },
+    {
+        id: 3,
+        label: '百家乐-3号桌',
+        value: '百家乐-3号桌',
+    },
+    {
+        id: 4,
+        label: '百家乐-4号桌',
+        value: '百家乐-4号桌',
+    },
+    {
+        id: 5,
+        label: '百家乐-5号桌',
+        value: '百家乐-5号桌',
     },
 
 ])
-onMounted(() => {
-    if (customPopup5.value) {
+
+// 检查当前是否有桌子绑定
+const checkTableBind = async () => {
+    // 如果绑定了直接到首页 ， 如果未绑定获取可绑定在桌台列表
+    if (getTableInfo?.id) {
+        goIndexPage(); // 如果绑定了直接到首页
+    } else {
+        // 弹出绑定弹窗
+        openBindPopup();
     }
-}) 
+}
+
+// 去绑定桌台
+const goBindTable = async () => {
+    // const res = await getTableList(); // 假设这是一个异步函数，返回一个Promise
+    closeBindPopup(); // 关闭当前弹窗
+    openTableListPopup(); // 打开绑定桌台弹窗
+}
+
+// 未绑定弹窗
+const openBindPopup = () => {
+    customPopup.value.open();
+}
+
+const closeBindPopup = () => {
+    customPopup.value.close();
+}
+
+// 桌台列表弹窗
+const openTableListPopup = async () => {
+    await nextTick()
+    customPopup2.value.open();
+}
+const closeTableListPopup = () => {
+    customPopup2.value.close();
+}
+
+// 选择游戏
+const chooseGame = (gameId) => {
+    gameList.forEach(item => {
+        item.choose = item.gameId === gameId
+    });
+
+    // 选择游戏后获取对应桌台列表
+    getTableListByChoosedGame()
+}
+
+const getTableListByChoosedGame = () => {
+
+}
+
+const chooseTable = (id) => {
+    chooseList.forEach(item => {
+        item.choose = item.id === id
+    });
+}
+
+const confirmBindTable = () => {
+    closeTableListPopup() // 关闭桌台列表弹窗 
+    // 存储选择桌台信息
+    const tableObj = chooseList.find(item => item.choose)
+    console.log(tableObj);
+    
+    setTableInfo(tableObj)
+    console.log(getTableInfo);
+    
+    // 去往首页
+    goIndexPage()
+}
+
+onMounted(() => {
+    if (params.value.type === 1) {
+        checkTableBind();
+
+    }
+})
 
 const goIndexPage = () => {
     uni.navigateTo({
         url: '/pages/index/index'
-    }) 
+    })
 }
 </script>
 
@@ -208,6 +319,7 @@ const goIndexPage = () => {
                 transform: translateY(-50%);
                 cursor: pointer;
             }
+
             .title {
                 color: #FFF;
                 font-family: "PingFang SC";

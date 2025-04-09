@@ -242,7 +242,6 @@ const calculateHeights2 = async () => {
                 ? Math.round(item.maxScrollOffset / 5) // 平均每 30px 1 秒，可调节
                 : 0
         })
-        console.log(giftList, container, content);
 
     });
 
@@ -400,7 +399,7 @@ onMounted(() => {
                 }
 
                 .ignore-vh-box {
-                    height: 106px;
+                   // height: 106px;
                 }
 
                 .user-list-scroll {
@@ -599,10 +598,12 @@ onMounted(() => {
                     display: flex;
                     align-items: center;
                     justify-content: center;
+                    height: 24px;
+
                 }
 
                 .ignore-vh-24 {
-                    height: 24px;
+                    // height: 24px;
                 }
             }
         }

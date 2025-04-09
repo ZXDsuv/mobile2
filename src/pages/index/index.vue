@@ -2,12 +2,13 @@
   <LayoutCom>
     <view class="index-page-container">
       <view class="header-layout ignore-vh-header" id="header-layout">
-        <text class="text-1 view-layout">百家乐119号桌子</text>
+        <text class="text-1 view-layout">{{ getTableInfo.label }}</text>
         <view class="view-1 view-layout"><text class="text-2">铺</text><text class="text-1">12</text></view>
         <view class="view-1 view-layout"><text class="text-2">靴</text><text class="text-1">5</text></view>
+        <view class="change-table-btn" @click="changeBindFn">换绑桌台</view>
       </view>
       <!-- 用户下注情况 -->
-      <view class="scroll-area" id="scroll-area" :style="{'height': scrollHeight + 'px'}">
+      <view class="scroll-area" id="scroll-area" :style="{ 'height': scrollHeight + 'px' }">
         <CustomUserStatus></CustomUserStatus>
       </view>
     </view>
@@ -20,6 +21,9 @@ import { ref, onMounted, onUnmounted } from 'vue';
 //com
 import CustomUserStatus from '@/components/CustomUserStatus/index.vue';
 
+import { useGameeStore } from "@/store"
+const { getTableInfo } = useGameeStore();
+
 const scrollHeight = ref(0); // 滚动高度
 
 const calcScrollHeight = () => {
@@ -31,7 +35,13 @@ const calcScrollHeight = () => {
   query.exec(res => {
     const headerHeight = res[0]?.height || 0;
     const paddingBottomValue = 30
-    scrollHeight.value = windowHeight - headerHeight - 30;
+    scrollHeight.value = windowHeight - headerHeight - paddingBottomValue;
+  });
+}
+
+const changeBindFn = () => {
+  uni.navigateTo({
+    url: '/pages/login/index?type=2'
   });
 }
 
@@ -131,6 +141,20 @@ onUnmounted(() => {
       font-weight: 500;
       line-height: normal;
       text-transform: uppercase;
+    }
+
+    .change-table-btn {
+      color: #D9C4B0;
+      text-align: center;
+      font-family: "PingFang SC";
+      font-size: 24px;
+      font-style: normal;
+      font-weight: 500;
+      line-height: normal;
+      text-transform: uppercase;
+      margin-left: 20px;
+      position: absolute;
+      right: 10rpx;
     }
   }
 
