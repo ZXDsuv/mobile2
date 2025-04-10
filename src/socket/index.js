@@ -66,6 +66,7 @@ class SocketIOClient {
       // this.startHeartbeat();
       this.rebindEvents();
       onConnect && onConnect();
+
     });
 
     this.socket.on('disconnect', (reason) => {
@@ -146,6 +147,10 @@ class SocketIOClient {
   // 离开房间
   leave(data) {
     this.emit('leave-room', {...data, "source": this.type });  
+  }
+
+  isConnected() {
+    return !!this.socket?.connected;
   }
 }
 

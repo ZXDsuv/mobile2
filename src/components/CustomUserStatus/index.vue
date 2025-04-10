@@ -75,7 +75,8 @@ import { ref, computed, onMounted, nextTick, reactive } from 'vue'
 import { numberWithCommas } from "@/utils/tool"
 
 // com
-import CustomWarning from "@/components/CustomWarning/index.vue"
+import CustomWarning from "@/components/CustomWarning/index.vue";
+
 const gameId = ref(1)
 const showGiftArea = ref(true); // 控制礼物区域的显示
 const listContainer = ref(null)

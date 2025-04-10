@@ -73,6 +73,19 @@ const changeBindFn = () => {
 }
 
 const initData = async () => {
+  // 加入房间
+  console.log("加入房间", socketIO.isConnected());
+
+  if (socketIO.isConnected()) {
+    
+    socketIO.emit('join-room', { table_id: getTableInfo.table_id, source: 'stream' });
+
+    socketIO.on('join-room-back', (data) => {
+      console.log(data);
+      
+    });
+
+  }
   // 获取桌台信息
   const res = await getTableInfoApi({ table_id: getTableInfo.table_id });
   if (res.code !== 200) return;
@@ -86,6 +99,8 @@ const initData = async () => {
 const openSocketOnEvent = () => {
   // 监听用户下注
   if (!socketBackType.value) return;
+  console.log("监听用户喜爱izhu1", socketBackType.value);
+  
   socketIO.on(socketBackType.value, (data) => {
     console.log('user_bet', data);
   });
