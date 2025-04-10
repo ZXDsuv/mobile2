@@ -21,7 +21,7 @@ export default {
   methods: {
     initSocket: function () {
       console.log(window.PROXY_CONFIG.VUE_APP_SOCKET_URL);
-      
+
       socketIO.init({
         url: window.PROXY_CONFIG.VUE_APP_SOCKET_URL,  // 使用相同的 URL 配置
         reconnection: true,  // 自动重连
@@ -41,7 +41,7 @@ export default {
 }
 </script>
 
-<style>
+<style lang="scss">
 /*每个页面公共css */
 html {
   font-size: calc(100vw / 10) !important;

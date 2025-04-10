@@ -16,7 +16,7 @@ const props = defineProps({
   }
 });
 const popup = ref(null);
-
+const isOpen = ref(false); // 新增 isOpen 属性来表示是否打开
 // 动态生成宽度类
 const widthClass = ref(`dialog-width-${props.width}`);
 
@@ -24,13 +24,15 @@ const open = () => {
   console.log(popup.value);
 
   popup.value && popup.value.open();
+  isOpen.value = true; // 打开时设置 isOpen 为 true
 };
 
 const close = () => {
   popup.value.close();
+  isOpen.value = false; // 关闭时设置 isOpen 为 false
 };
 
-defineExpose({ open, close });
+defineExpose({ open, close, isOpen  });
 </script>
 
 <template>

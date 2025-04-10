@@ -6,6 +6,7 @@ import uni from '@dcloudio/vite-plugin-uni'
 import postcssPxToViewport from 'postcss-px-to-viewport-8-plugin'
 import postcssPxtorem from 'postcss-pxtorem'
 import path from 'path' // 需要安装 @types/node
+import vue from '@vitejs/plugin-vue';
 
 
 export default defineConfig(({
@@ -35,8 +36,7 @@ export default defineConfig(({
       }
     },
     optimizeDeps: {
-      // include: ['socket.io-client', 'socket.io-parser',
-      // ]
+      include: ['uview-ui']
     },
     define: {
       __BASE_URL__: JSON.stringify(process.env.BASE_URL || '/')
@@ -85,6 +85,7 @@ export default defineConfig(({
           }),
         ],
       },
+    
     },
   }
 })

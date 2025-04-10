@@ -1,26 +1,18 @@
-
-
-
 export const getUrl = () => {
 	return window.PROXY_CONFIG.VUE_APP_API_URL
 }
+
 function getToken() {
-  return uni.getStorageSync('token')?.value
+	return uni.getStorageSync('token')?.value
 }
 
 function getLang() {
-	return uni.getStorageSync('chooseLanguage') 
+	return uni.getStorageSync('chooseLanguage')
 }
 
-export const baseRequest = async (url, method, data = {}, isGlobal = true) => {
+export const baseRequest = async (url, method, data = {}, isGlobal = false) => {
 
-	let header = isGlobal ? {
-		'lang': getLang()
-	} : {
-		'Authorization': getToken() || '',
-		'lang': getLang() 
-	}
-	console.log(header);
+	let header = {'Authorization': getToken() || ''};
 	return new Promise((reslove, reject) => {
 		uni.request({
 			url: getUrl() + url,

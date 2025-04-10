@@ -3,9 +3,11 @@
     <view class="index-page-container">
       <view class="header-layout ignore-vh-header" id="header-layout">
         <text class="text-1 view-layout">{{ getTableInfo.label }}</text>
-        <view class="view-1 view-layout"><text class="text-2">铺</text><text class="text-1">12</text></view>
-        <view class="view-1 view-layout"><text class="text-2">靴</text><text class="text-1">5</text></view>
-        <view class="change-table-btn" @click="changeBindFn">换绑桌台</view>
+        <view class="view-1 view-layout"><text class="text-2">铺</text><text class="text-1">{{ tableDetail.number.number }}</text></view>
+        <view class="view-1 view-layout"><text class="text-2">靴</text><text class="text-1">{{ tableDetail.number.boot_num }}</text></view>
+        <view class="change-table-btn" @click="changeBindFn">
+          <image src="@/static/images/index/change.svg"></image>
+        </view>
       </view>
       <!-- 用户下注情况 -->
       <view class="scroll-area" id="scroll-area" :style="{ 'height': scrollHeight + 'px' }">
@@ -21,8 +23,15 @@ import { ref, onMounted, onUnmounted } from 'vue';
 //com
 import CustomUserStatus from '@/components/CustomUserStatus/index.vue';
 
+//api
+import { getTableInfoApi } from "@/request/index"
+
 import { useGameeStore } from "@/store"
+import { reactive } from 'vue';
 const { getTableInfo } = useGameeStore();
+
+// 桌台信息
+const tableDetail = reactive({});
 
 const scrollHeight = ref(0); // 滚动高度
 
@@ -45,8 +54,21 @@ const changeBindFn = () => {
   });
 }
 
+const initData = async () => {
+  // 获取桌台信息
+  const res = await getTableInfoApi({table_id: getTableInfo.table_id});
+  if(res.code !== 200) return;
+  Object.assign(tableDetail, res.data);
+
+  
+}
+
 onMounted(() => {
   calcScrollHeight();
+  console.log(111);
+  
+  // 初始化
+  initData()
 
   // 监听窗口变化
   uni.onWindowResize(() => {
@@ -153,8 +175,18 @@ onUnmounted(() => {
       line-height: normal;
       text-transform: uppercase;
       margin-left: 20px;
+      padding: 6px;
       position: absolute;
-      right: 10rpx;
+      right: 4rpx;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.15);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      >image {
+        width: 32px;
+        height: 32px;
+      }
     }
   }
 

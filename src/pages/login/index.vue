@@ -54,7 +54,7 @@
 
             <view class="choose-content">
                 <view @click="chooseTable(item.id)" class="choose-item" :class="{ 'choosed': item.isChoosed }"
-                    v-for="(item, i) in chooseList" :key="i">
+                    v-for="(item, i) in getTableChoose" :key="i">
                     <view class="choose" :class="{ 'choosed-item': item.isChoosed }">
                         <image src="/static/logo/gou.svg" v-if="item.isChoosed" />
                         <view v-if="item.choose"></view>
@@ -95,7 +95,9 @@ import {
     onMounted,
     reactive,
     ref,
-    nextTick
+    nextTick,
+    computed,
+    watchEffect
 } from "vue";
 import CustomDialog from "@/components/CustomDialog/index.vue"
 
@@ -106,6 +108,9 @@ import { getTableList } from "@/request/index.js"
 import { usePageParams } from "@/composables/usePageParams"
 // types
 import type { QueryParams } from "./types";
+
+// vant
+
 // store
 import { useGameeStore } from "@/store"
 const { setTableInfo, getTableInfo } = useGameeStore();
@@ -129,8 +134,9 @@ const { params, rawParams, resetParams } = usePageParams<QueryParams>({
     onParamsLoaded: (p) => {
         console.log('参数加载完成:', p)
         if (p.type === 2) { // 切换绑定
+            // 先设置当前绑定的桌台
             // 弹出绑定弹窗
-            openTableListPopup()
+            getTableListFn()
         }
 
     }
@@ -144,46 +150,24 @@ const gameList = reactive([
         choose: 1
     },
     {
-        gameId: 2,
-        label: '德州扑克',
-        value: '德州扑克'
-    },
-    {
         gameId: 3,
-        label: '龙虎斗',
-        value: '龙虎斗'
+        label: '牛牛',
+        value: '牛牛'
     }
 ])
-const chooseList = reactive([
-    {
-        id: 1,
-        label: '百家乐-1号桌',
-        value: '百家乐-1号桌',
-        choose: 1
-    },
-    {
-        id: 2,
-        label: '百家乐-2号桌',
-        value: '百家乐-2号桌',
-        // isChoosed: 1
-    },
-    {
-        id: 3,
-        label: '百家乐-3号桌',
-        value: '百家乐-3号桌',
-    },
-    {
-        id: 4,
-        label: '百家乐-4号桌',
-        value: '百家乐-4号桌',
-    },
-    {
-        id: 5,
-        label: '百家乐-5号桌',
-        value: '百家乐-5号桌',
-    },
 
-])
+// 当前选择的gameId
+const currentGameId = computed(() => {
+    const game = gameList.find(item => item.choose);
+    return game?.gameId || 1
+})
+// 所有的桌子列表
+let allTableList = ref([])
+
+// 根据选择的游戏展示对应的桌台
+const getTableChoose = computed(() => {
+    return allTableList.value.filter(item => item.game_id === currentGameId.value)
+})
 
 // 检查当前是否有桌子绑定
 const checkTableBind = async () => {
@@ -196,11 +180,39 @@ const checkTableBind = async () => {
     }
 }
 
+// 获取桌台列表
+const getTableListFn = async () => {
+    // 获取桌台列表
+    const res = await getTableList(); // 假设这是一个异步函数，返回一个Promise
+    if (res.code !== 200) return;
+    // 构造桌子列表
+    allTableList.value = res.data.map(item => ({
+        ...item, // 展开原始数据，包括game_id和table_id等字段
+        id: item.table_id, // 桌子ID
+        label: item.table_name, // 桌子名称
+        value: item.table_id, // 桌子ID作为值
+    }))
+
+    //历史绑定桌台信息
+    if (getTableInfo?.table_id) {
+        // 历史游戏
+        gameList.forEach(item => {
+            item.choose = item.gameId === getTableInfo?.game_id 
+        })
+
+        allTableList.value = [...allTableList.value.map(item => {
+            item.choose = item.table_id === getTableInfo?.table_id
+            return item; // 保持不变
+        })]
+    }
+    openTableListPopup(); // 打开绑定桌台弹窗
+
+}
+
 // 去绑定桌台
 const goBindTable = async () => {
-    // const res = await getTableList(); // 假设这是一个异步函数，返回一个Promise
+    await getTableListFn();
     closeBindPopup(); // 关闭当前弹窗
-    openTableListPopup(); // 打开绑定桌台弹窗
 }
 
 // 未绑定弹窗
@@ -215,7 +227,12 @@ const closeBindPopup = () => {
 // 桌台列表弹窗
 const openTableListPopup = async () => {
     await nextTick()
-    customPopup2.value.open();
+    console.log(customPopup2.value.isOpen);
+
+    // goBindTable();
+    if (!customPopup2.value.isOpen) {
+        customPopup2.value.open();
+    }
 }
 const closeTableListPopup = () => {
     customPopup2.value.close();
@@ -236,20 +253,29 @@ const getTableListByChoosedGame = () => {
 }
 
 const chooseTable = (id) => {
-    chooseList.forEach(item => {
-        item.choose = item.id === id
-    });
+    console.log(id, allTableList.value);
+
+    allTableList.value = [...allTableList.value.map(item => {
+        item.choose = item.table_id === id
+        return item; // 保持不变
+    })]
 }
 
+const isChooseTable = computed(() => {
+    return allTableList.value.some(item => item.choose)
+})
+
 const confirmBindTable = () => {
+    console.log(isChooseTable.value);
+
+    // 判断有没有选择桌台
+    if (!isChooseTable.value) return;
     closeTableListPopup() // 关闭桌台列表弹窗 
     // 存储选择桌台信息
-    const tableObj = chooseList.find(item => item.choose)
-    console.log(tableObj);
-    
+    const tableObj = allTableList.value.find(item => item.choose)
+
     setTableInfo(tableObj)
-    console.log(getTableInfo);
-    
+
     // 去往首页
     goIndexPage()
 }
@@ -495,8 +521,12 @@ const goIndexPage = () => {
         flex-wrap: wrap;
         justify-content: space-between;
         row-gap: 32px;
+        height: 50vh;
+        max-height: 50vh;
+        overflow-y: auto;
 
         .choose-item {
+            height: fit-content;
             width: calc(33%);
             position: relative;
             display: flex;
