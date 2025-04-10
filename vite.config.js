@@ -5,7 +5,6 @@ import {
 import uni from '@dcloudio/vite-plugin-uni'
 import postcssPxToViewport from 'postcss-px-to-viewport-8-plugin'
 import postcssPxtorem from 'postcss-pxtorem'
-import vue from '@vitejs/plugin-vue'
 import path from 'path' // 需要安装 @types/node
 
 
@@ -32,11 +31,12 @@ export default defineConfig(({
     resolve: {
       alias: {
         '@': path.resolve(__dirname, 'src'),
-        'socket.io-parser': require.resolve('socket.io-parser')
+        // 'socket.io-parser': require.resolve('socket.io-parser')
       }
     },
     optimizeDeps: {
-      include: ['socket.io-client', 'socket.io-parser']
+      // include: ['socket.io-client', 'socket.io-parser',
+      // ]
     },
     define: {
       __BASE_URL__: JSON.stringify(process.env.BASE_URL || '/')

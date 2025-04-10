@@ -54,28 +54,29 @@
     "@dcloudio/uni-mp-xhs": "3.0.0-4040520250104002",
     "@dcloudio/uni-quickapp-webview": "3.0.0-4040520250104002",
     "@socket.io/component-emitter": "^3.1.2",
+    "component-emitter": "^2.0.0",
+    "debug": "^4.4.0",
     "deep-pick-omit": "^1.2.1",
     "destr": "^2.0.5",
-    "engine.io-client": "^6.6.3",
-    "engine.io-parser": "^5.2.3",
+    "isarray": "^2.0.5",
     "pinia": "^3.0.1",
     "pinia-plugin-persistedstate": "^4.2.0",
-    "socket.io-client": "^4.8.1",
-    "socket.io-parser": "^3.3.4",
-    "vue": "^3.4.21",
-    "vue-i18n": "^9.1.9"
+    "socket.io-client": "^2.5.0",
+    "vue": "^3.5.13",
+    "vue-i18n": "^9.14.3"
   },
   "devDependencies": {
-    "@dcloudio/types": "^3.4.8",
+    "@dcloudio/types": "^3.4.14",
     "@dcloudio/uni-automator": "3.0.0-4040520250104002",
     "@dcloudio/uni-cli-shared": "3.0.0-4040520250104002",
     "@dcloudio/uni-stacktracey": "3.0.0-4040520250104002",
     "@dcloudio/vite-plugin-uni": "3.0.0-4040520250104002",
     "@types/node": "^22.14.0",
     "@vitejs/plugin-vue": "^5.2.3",
-    "@vue/runtime-core": "^3.4.21",
+    "@vue/runtime-core": "^3.5.13",
     "postcss-px-to-viewport-8-plugin": "^1.2.5",
     "postcss-pxtorem": "^6.1.0",
+    "sass-loader": "^16.0.5",
     "vite": "5.2.8"
   }
 }

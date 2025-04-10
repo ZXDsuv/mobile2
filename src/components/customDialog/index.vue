@@ -9,6 +9,10 @@ const props = defineProps({
   width: {
     type: [String, Number],
     default: '920' // 默认宽度为 80%
+  },
+  maskClick: {
+    type: Boolean,
+    default: false // 默认不允许点击遮罩关闭
   }
 });
 const popup = ref(null);
@@ -30,7 +34,7 @@ defineExpose({ open, close });
 </script>
 
 <template>
-  <uni-popup ref="popup" type="center" background-color="transparent">
+  <uni-popup ref="popup" type="center" background-color="transparent" :mask-click="maskClick">
     <view :class="['dialog', widthClass]">
       <!-- 标题 -->
       <view class="dialog-header">{{ title }}</view>
