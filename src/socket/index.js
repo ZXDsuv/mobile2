@@ -6,6 +6,7 @@ class SocketIOClient {
     this.options = {};
     this.events = new Map();
     this.heartbeatTimer = null;
+    this.type = "stream"
   }
 
   /**
@@ -53,7 +54,6 @@ class SocketIOClient {
       onConnect,
       onDisconnect,
     } = this.options;
-    console.log(url);
     
     this.socket = io(url, {
       auth,
@@ -63,7 +63,7 @@ class SocketIOClient {
 
     this.socket.on('connect', () => {
       console.log('✅ Socket.io 已连接:');
-      this.startHeartbeat();
+      // this.startHeartbeat();
       this.rebindEvents();
       onConnect && onConnect();
     });
@@ -108,6 +108,7 @@ class SocketIOClient {
   on(event, callback) {
     this.events.set(event, callback);
     if (this.socket) {
+      console.log('📥 监听事件：', event);
       this.socket.on(event, callback);
     }
   }
@@ -115,6 +116,7 @@ class SocketIOClient {
   off(event) {
     const callback = this.events.get(event);
     if (callback && this.socket) {
+      console.log('📤 移除事件：', event);
       this.socket.off(event, callback);
     }
     this.events.delete(event);
@@ -134,6 +136,16 @@ class SocketIOClient {
       this.socket = null;
       console.log('❎ Socket.io 已断开');
     }
+  }
+
+  // 加入房间
+  join(data) {
+    this.emit('join-room', {...data, "source": this.type });
+  }
+
+  // 离开房间
+  leave(data) {
+    this.emit('leave-room', {...data, "source": this.type });  
   }
 }
 

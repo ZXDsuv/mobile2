@@ -12,7 +12,6 @@ import vue from '@vitejs/plugin-vue';
 export default defineConfig(({
   mode
 }) => {
-  console.log(loadEnv(mode, process.cwd()).VITE_BASE_URL);
 
   // 设定默认值为 1920×1080
   let viewportWidth = 1920

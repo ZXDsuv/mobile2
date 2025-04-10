@@ -20,7 +20,6 @@ export default {
   },
   methods: {
     initSocket: function () {
-      console.log(window.PROXY_CONFIG.VUE_APP_SOCKET_URL);
 
       socketIO.init({
         url: window.PROXY_CONFIG.VUE_APP_SOCKET_URL,  // 使用相同的 URL 配置
@@ -28,14 +27,11 @@ export default {
         reconnectionDelay: 1000,  // 重连延迟时间
         reconnectionAttempts: Infinity,  // 重连次数
         transports: ['websocket'],  // 使用 WebSocket 协议
-        heartbeatInterval: 10000,  // 心跳间隔
-        heartbeatMsg: '💓',  // 心跳消息内容
+        // heartbeatInterval: 10000,  // 心跳间隔
+        // heartbeatMsg: '💓',  // 心跳消息内容
       });
 
-      // // 可在此注册全局的系统消息监听等
-      // socketIO.on('system', (msg) => {
-      //   console.log('🖥️ 系统通知:', msg);
-      // });
+  
     }
   }
 }

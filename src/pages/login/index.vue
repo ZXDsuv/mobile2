@@ -109,7 +109,8 @@ import { usePageParams } from "@/composables/usePageParams"
 // types
 import type { QueryParams } from "./types";
 
-// vant
+// COMMON
+import COMMON_DATA from "@/utils/common";
 
 // store
 import { useGameeStore } from "@/store"
@@ -142,19 +143,7 @@ const { params, rawParams, resetParams } = usePageParams<QueryParams>({
     }
 })
 
-const gameList = reactive([
-    {
-        gameId: 1,
-        label: '百家乐',
-        value: '百家乐',
-        choose: 1
-    },
-    {
-        gameId: 3,
-        label: '牛牛',
-        value: '牛牛'
-    }
-])
+const gameList = reactive(COMMON_DATA.GAME_LIST)
 
 // 当前选择的gameId
 const currentGameId = computed(() => {
@@ -197,7 +186,7 @@ const getTableListFn = async () => {
     if (getTableInfo?.table_id) {
         // 历史游戏
         gameList.forEach(item => {
-            item.choose = item.gameId === getTableInfo?.game_id 
+            item.choose = item.gameId === getTableInfo?.game_id
         })
 
         allTableList.value = [...allTableList.value.map(item => {
@@ -227,10 +216,9 @@ const closeBindPopup = () => {
 // 桌台列表弹窗
 const openTableListPopup = async () => {
     await nextTick()
-    console.log(customPopup2.value.isOpen);
 
     // goBindTable();
-    if (!customPopup2.value.isOpen) {
+    if (!customPopup2?.value?.isOpen) {
         customPopup2.value.open();
     }
 }
@@ -253,7 +241,6 @@ const getTableListByChoosedGame = () => {
 }
 
 const chooseTable = (id) => {
-    console.log(id, allTableList.value);
 
     allTableList.value = [...allTableList.value.map(item => {
         item.choose = item.table_id === id
@@ -266,7 +253,6 @@ const isChooseTable = computed(() => {
 })
 
 const confirmBindTable = () => {
-    console.log(isChooseTable.value);
 
     // 判断有没有选择桌台
     if (!isChooseTable.value) return;

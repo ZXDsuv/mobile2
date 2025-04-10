@@ -3,8 +3,10 @@
     <view class="index-page-container">
       <view class="header-layout ignore-vh-header" id="header-layout">
         <text class="text-1 view-layout">{{ getTableInfo.label }}</text>
-        <view class="view-1 view-layout"><text class="text-2">铺</text><text class="text-1">{{ tableDetail.number.number }}</text></view>
-        <view class="view-1 view-layout"><text class="text-2">靴</text><text class="text-1">{{ tableDetail.number.boot_num }}</text></view>
+        <view class="view-1 view-layout"><text class="text-2">铺</text><text class="text-1">{{
+          tableDetail?.number?.number }}</text></view>
+        <view class="view-1 view-layout"><text class="text-2">靴</text><text class="text-1">{{
+          tableDetail?.number?.boot_num }}</text></view>
         <view class="change-table-btn" @click="changeBindFn">
           <image src="@/static/images/index/change.svg"></image>
         </view>
@@ -19,19 +21,35 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { onHide } from '@dcloudio/uni-app';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 //com
 import CustomUserStatus from '@/components/CustomUserStatus/index.vue';
 
 //api
 import { getTableInfoApi } from "@/request/index"
 
+//socket
+import { socketIO } from '@/socket/index.js';
+
+// COMMON
+import COMMON_DATA from "@/utils/common";
+
+//store
 import { useGameeStore } from "@/store"
 import { reactive } from 'vue';
 const { getTableInfo } = useGameeStore();
 
 // 桌台信息
 const tableDetail = reactive({});
+
+const gameList = reactive(COMMON_DATA.GAME_LIST)
+
+// 根据桌台信息带的游戏id获取当前桌子的信息
+const socketBackType = computed(() => {
+  const gameId = gameList.find(item => item.gameId === tableDetail?.table?.game_id)?.gameId || 1;
+  return COMMON_DATA.GAME_SOCKET_TYPE[gameId] || null;
+});
 
 const scrollHeight = ref(0); // 滚动高度
 
@@ -56,17 +74,29 @@ const changeBindFn = () => {
 
 const initData = async () => {
   // 获取桌台信息
-  const res = await getTableInfoApi({table_id: getTableInfo.table_id});
-  if(res.code !== 200) return;
+  const res = await getTableInfoApi({ table_id: getTableInfo.table_id });
+  if (res.code !== 200) return;
   Object.assign(tableDetail, res.data);
 
-  
+  // 注册socket的监听事件
+  openSocketOnEvent();
 }
+
+// 注册socket的监听事件
+const openSocketOnEvent = () => {
+  // 监听用户下注
+  if (!socketBackType.value) return;
+  socketIO.on(socketBackType.value, (data) => {
+    console.log('user_bet', data);
+  });
+}
+
+
+
 
 onMounted(() => {
   calcScrollHeight();
-  console.log(111);
-  
+
   // 初始化
   initData()
 
@@ -76,10 +106,11 @@ onMounted(() => {
   });
 })
 
-// 销毁时移除监听
-onUnmounted(() => {
+onHide(() => {
   uni.offWindowResize(calcScrollHeight);
+  socketBackType.value && socketIO.off(socketBackType.value);
 })
+
 
 </script>
 
@@ -183,6 +214,7 @@ onUnmounted(() => {
       display: flex;
       justify-content: center;
       align-items: center;
+
       >image {
         width: 32px;
         height: 32px;

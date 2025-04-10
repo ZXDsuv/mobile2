@@ -21,7 +21,6 @@ const isOpen = ref(false); // 新增 isOpen 属性来表示是否打开
 const widthClass = ref(`dialog-width-${props.width}`);
 
 const open = () => {
-  console.log(popup.value);
 
   popup.value && popup.value.open();
   isOpen.value = true; // 打开时设置 isOpen 为 true
