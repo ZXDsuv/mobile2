@@ -8,3 +8,14 @@ export function numberWithCommas(x) {
     return x;
   }
   
+
+  export function groupBy(arr, key) {
+    return arr.reduce((result, item) => {
+      const groupKey = item[key];
+      if (!result[groupKey]) {
+        result[groupKey] = [];
+      }
+      result[groupKey].push(item);
+      return result;
+    }, {});
+  }

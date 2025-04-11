@@ -1,9 +1,9 @@
 <template>
     <view class="custom-user-status">
         <view class="list-area" :class="{ 'has-gift-area': showGiftArea }">
-            <view class="user-box" v-for="item in list" :key="item">
+            <view class="user-box" v-for="item in list" :key="item.num">
                 <view class="user-title">
-                    <view class="user-seat">3</view>
+                    <view class="user-seat">{{ item.num }}</view>
                     <view class="user-count">
                         <image src="@/static/images/index/user-icon.svg" class="people-icon"></image>
                         <text>11</text>
@@ -53,10 +53,10 @@
         <view class="user-gift-area" v-if="showGiftArea">
             <view class="gift-item" v-for="item in giftList" :key="item" :data-id="item.id">
                 <view class="item-header" :class="item.className">
-                    {{ item.name }}
+                    {{ item.label }}
                 </view>
                 <view class="scroll-content" :style="getScrollStyle(item)" :data-id="item.id">
-                    <view class="item-content" v-for="i in item.num" :key="i">
+                    <view class="item-content" v-for="i in item.numList" :key="i">
                         <view class="content-header ignore-vh-24">666-1</view>
                         <view class="content-content ignore-vh-24">{{ `100(2)` }}</view>
                     </view>
@@ -69,7 +69,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick, reactive } from 'vue'
+import { ref, computed, toRef, onMounted, nextTick, reactive, defineProps, watch, watchEffect } from 'vue'
 
 // tool
 import { numberWithCommas } from "@/utils/tool"
@@ -77,6 +77,36 @@ import { numberWithCommas } from "@/utils/tool"
 // com
 import CustomWarning from "@/components/CustomWarning/index.vue";
 
+// static
+import COMMON from "@/utils/common";
+
+// 定义 props
+const props = defineProps({
+    list1: {
+        type: Array,
+        default: () => []
+    }
+})
+function smartUpdateList(targetList, newList) {
+    // 如果长度不一样或 key 不一样才整体替换
+    if (
+        targetList.length !== newList.length ||
+        targetList.some((item, index) => item.id !== newList[index].id)
+    ) {
+        targetList.splice(0, targetList.length, ...newList) // 保持引用不变
+    } else {
+        // 否则只替换每一项的内容
+        newList.forEach((newItem, index) => {
+            Object.assign(targetList[index], newItem)
+        })
+    }
+}
+
+let list = ref(props.list1)
+watch(() => props.list1, (newVal) => {
+    
+    smartUpdateList(list.value, newVal)
+}, { immediate: true, deep: true })
 const gameId = ref(1)
 const showGiftArea = ref(true); // 控制礼物区域的显示
 const listContainer = ref(null)
@@ -88,33 +118,9 @@ const scrollContent = ref(null)
 // containerHeight: 容器高度
 // maxScrollOffset: 最大滚动偏移量
 // isChecked: 是否赔付
-let list = reactive([
-    { id: 1, num: 8, warning: true, scrollSpeed: 0, contentHeight: 0, containerHeight: 0 },
-    { id: 2, num: 2, scrollSpeed: 0, contentHeight: 0, containerHeight: 0 },
-    { id: 3, num: 12, scrollSpeed: 0, contentHeight: 0, containerHeight: 0 },
-])
 
 let giftList = reactive([
-    { id: 1, name: '庄对', className: 'gift-1', num: 8, scrollSpeed: 0, contentHeight: 0, containerHeight: 0 },
-    { id: 2, name: '闲对', className: 'gift-2', num: 2, scrollSpeed: 0, contentHeight: 0, containerHeight: 0 },
-    {
-        id: 3, name: '和', className: 'gift-3', num: 12, scrollSpeed: 0, contentHeight: 0, containerHeight: 0,
-    },
-    {
-        id: 4, name: '幸运6', className: 'gift-4', num: 12, scrollSpeed: 0, contentHeight: 0, containerHeight: 0,
-    },
-    {
-        id: 5, name: '幸运7', className: 'gift-5', num: 12, scrollSpeed: 0, contentHeight: 0, containerHeight: 0,
-    },
-    {
-        id: 6, name: '超级幸运7', className: 'gift-6', num: 12, scrollSpeed: 0, contentHeight: 0, containerHeight: 0,
-    },
-    {
-        id: 7, name: '大老虎', className: 'gift-7', num: 12, scrollSpeed: 0, contentHeight: 0, containerHeight: 0,
-    },
-    {
-        id: 8, name: '小老虎', className: 'gift-7', num: 12, scrollSpeed: 0, contentHeight: 0, containerHeight: 0,
-    }
+    ...COMMON.COMMON_AREA_POSITION
 ])
 
 const getScrollStyle = (item) => ({
@@ -170,10 +176,9 @@ const calculateHeights = async () => {
         container.forEach((item, index) => {
             const id = item.dataset.id;
 
-            list = list.map((i) => {
+            list.value = list.value.map((i) => {
                 if (i.id === id) {
                     i.containerHeight = item?.height || 0;
-
                 }
                 return i;
             })
@@ -181,7 +186,7 @@ const calculateHeights = async () => {
 
         content.forEach((item, index) => {
             const id = item.dataset.id;
-            list = list.map((i) => {
+            list.value = list.value.map((i) => {
                 if (i.id === id) {
                     i.contentHeight = item?.height || 0;
                 }
@@ -189,7 +194,7 @@ const calculateHeights = async () => {
             })
         })
 
-        list.forEach((item) => {
+        list.value.forEach((item) => {
             item.maxScrollOffset = Math.max(item.contentHeight - item.containerHeight, 0);
             item.scrollSpeed = item.maxScrollOffset > 0
                 ? Math.round(item.maxScrollOffset / 5) // 平均每 30px 1 秒，可调节
@@ -400,7 +405,7 @@ onMounted(() => {
                 }
 
                 .ignore-vh-box {
-                   // height: 106px;
+                    // height: 106px;
                 }
 
                 .user-list-scroll {
@@ -506,7 +511,9 @@ onMounted(() => {
     .user-gift-area {
         display: flex;
         gap: 16px;
+
         .gift-item {
+
             height: 188px;
             flex: 1;
             display: flex;
@@ -522,7 +529,6 @@ onMounted(() => {
                 color: #CC2929;
                 text-align: center;
                 font-family: "PingFang SC";
-                font-size: 24px;
                 font-style: normal;
                 font-weight: 600;
                 display: flex;
@@ -530,6 +536,10 @@ onMounted(() => {
                 justify-content: center;
                 flex-shrink: 0;
                 z-index: 1;
+                white-space: nowrap;
+                font-size: clamp(12px, 24px, 24px);
+                overflow: hidden;
+                text-overflow: ellipsis;
             }
 
             .scroll-content {

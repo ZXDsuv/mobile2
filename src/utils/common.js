@@ -18,6 +18,7 @@ export default {
     // 公共区域下注位置
     COMMON_AREA_POSITION: [
         {
+            id: 'banker_pair',
             label: '庄对',
             key: 'banker_pair',
             className: 'gift-1',
@@ -28,6 +29,7 @@ export default {
         {
             label: '闲对',
             key: 'player_pair',
+            id: 'player_pair',
             className: 'gift-2',
             scrollSpeed: 0,
             contentHeight: 0,
@@ -36,6 +38,7 @@ export default {
         {
             label: '和',
             key: 'tie',
+            id: 'tie',
             className: 'gift-3',
             scrollSpeed: 0,
             contentHeight: 0,
@@ -44,6 +47,7 @@ export default {
         {
             label: '幸运6',
             key: 'luck_six',
+            id: 'luck_six',
             className: 'gift-4',
             scrollSpeed: 0,
             contentHeight: 0,
@@ -52,6 +56,7 @@ export default {
         {
             label: '小老虎',
             key: 'luck_six_fixed_2',
+            id: 'luck_six_fixed_2',
             className: 'gift-7',
             scrollSpeed: 0,
             contentHeight: 0,
@@ -60,6 +65,7 @@ export default {
         {
             label: '大老虎',
             key: 'luck_six_fixed_3',
+            id: 'luck_six_fixed_3',
             className: 'gift-7',
             scrollSpeed: 0,
             contentHeight: 0,
@@ -68,6 +74,7 @@ export default {
         {
             label: '龙7',
             key: 'dragon_seven',
+            id: 'dragon_seven',
             className: 'gift-7',
             scrollSpeed: 0,
             contentHeight: 0,
@@ -76,6 +83,7 @@ export default {
         {
             label: '熊八',
             key: 'bear_eight',
+            id: 'bear_eight',
             className: 'gift-7',
             scrollSpeed: 0,
             contentHeight: 0,
@@ -84,6 +92,7 @@ export default {
         {
             label: '保险',
             key: 'insurance',
+            id: 'insurance',
             className: 'gift-7',
             scrollSpeed: 0,
             contentHeight: 0,
@@ -92,6 +101,7 @@ export default {
         {
             label: '三条',
             key: 'three_kind',
+            id: 'three_kind',
             className: 'gift-7',
             scrollSpeed: 0,
             contentHeight: 0,
@@ -100,6 +110,7 @@ export default {
         {
             label: '四条',
             key: 'four_kind',
+            id: 'four_kind',
             className: 'gift-7',
             scrollSpeed: 0,
             contentHeight: 0,
@@ -108,6 +119,7 @@ export default {
         {
             label: '五条',
             key: 'five_kind',
+            id: 'five_kind',
             className: 'gift-7',
             scrollSpeed: 0,
             contentHeight: 0,
@@ -116,6 +128,7 @@ export default {
         {
             label: '六条',
             key: 'six_kind',
+            id: 'six_kind',
             className: 'gift-7',
             scrollSpeed: 0,
             contentHeight: 0,
@@ -124,6 +137,7 @@ export default {
         {
             label: '花',
             key: 'flush',
+            id: 'flush',
             className: 'gift-7',
             scrollSpeed: 0,
             contentHeight: 0,
@@ -132,6 +146,7 @@ export default {
         {
             label: '顺子',
             key: 'straight',
+            id:'straight',
             className: 'gift-7',
             scrollSpeed: 0,
             contentHeight: 0,
@@ -140,6 +155,7 @@ export default {
         {
             label: '同花顺',
             key: 'straight_flush',
+            id:'straight_flush',
             className: 'gift-7',
             scrollSpeed: 0,
             contentHeight: 0,
@@ -148,6 +164,7 @@ export default {
         {
             label: '皇家同花顺',
             key: 'royal_flush',
+            id: 'royal_flush',
             className: 'gift-7',
             scrollSpeed: 0,
             contentHeight: 0,
@@ -156,6 +173,7 @@ export default {
         {
             label: '葫芦',
             key: 'full_hose',
+            id: 'full_hose',
             className: 'gift-7',
             scrollSpeed: 0,
             contentHeight: 0,
@@ -164,6 +182,7 @@ export default {
         {
             label: '两对',
             key: 'two_pair',
+            id: 'two_pair',
             className: 'gift-7',
             scrollSpeed: 0,
             contentHeight: 0,
