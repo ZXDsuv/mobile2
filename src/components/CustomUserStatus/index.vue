@@ -537,7 +537,7 @@ onMounted(() => {
                 flex-shrink: 0;
                 z-index: 1;
                 white-space: nowrap;
-                font-size: clamp(12px, 24px, 24px);
+                font-size: clamp(12px, 18px, 18px);
                 overflow: hidden;
                 text-overflow: ellipsis;
             }
