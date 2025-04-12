@@ -259,7 +259,8 @@ const confirmBindTable = () => {
     closeTableListPopup() // 关闭桌台列表弹窗 
     // 存储选择桌台信息
     const tableObj = allTableList.value.find(item => item.choose)
-
+    console.log(tableObj, 'tableObj');
+    
     setTableInfo(tableObj)
 
     // 去往首页

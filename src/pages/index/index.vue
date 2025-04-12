@@ -45,6 +45,8 @@ const { getTableInfo } = useGameeStore();
 // 桌台信息
 const tableDetail = reactive({});
 
+let nnGameList = ref(new Map());
+
 const gameList = reactive(COMMON_DATA.GAME_LIST)
 
 // 公共区域
@@ -198,9 +200,9 @@ const constructCommonArea = (info) => {
       return newItem;
     });
 
-    
-    commonArea.value = commonArea.value.filter(item => item.numList && item.numList.length > 0)
-    
+
+  commonArea.value = commonArea.value.filter(item => item.numList && item.numList.length > 0)
+
 }
 
 
@@ -210,17 +212,69 @@ const openSocketOnEvent = () => {
   if (!socketBackType.value) return;
 
   socketIO.on(socketBackType.value, (data) => {
+    console.log(data);
+
     const { info, num, table_id } = data;
-    // 庄闲按座位分组
-    // 非公共区域
-    if (+num > 0) {
-      fenzuFn(info, num);
-    } else {
-      // 公共区域
-      constructCommonArea(info);
+
+    if (getTableInfo.game_id === 1) {
+      // 庄闲按座位分组
+      // 非公共区域
+      if (+num > 0) {
+        fenzuFn(info, num);
+      } else {
+        // 公共区域
+        constructCommonArea(info);
+      }
+    } else if (getTableInfo.game_id === 3) {
+      // 牛牛
+      constructGameNN(data);
     }
+
   });
 }
+
+
+const constructGameNN = (data) => {
+  const { info, num, table_id, area, swap, full_bet_type } = data;
+
+  const numKey = +num;
+  const numData = nnGameList.value.get(numKey) || {};
+
+  // 更新对应区域下注信息
+  numData[area] = [...info];
+
+  // 构造每个座位每个用户的下注信息
+  const userBetList = numData['userList'] || [];
+  numData[area].forEach((item, index) => {
+    // 是否存在用户信息了
+    const hasUser = userBetList.find(user => user.user_id === item.user_id);
+    const hasArea = hasUser.areaList.some(area => area.area === area);
+    if(hasUser && hasArea) {
+      // 更新
+      const userIndex = userBetList.findIndex(user => user.user_id === item.user_id);
+      userBetList[userIndex][area] = item;
+    }
+  })
+
+  // 公共字段更新
+  Object.assign(numData, {
+    swap,
+    full_bet_type,
+    table_id,
+    num: numKey,
+    userList: userBetList
+  });
+
+
+
+  nnGameList.value.set(numKey, numData);
+
+
+  // 更新 map
+  nnGameList.value.set(numKey, numData);
+  const gameArray = Array.from(nnGameList.value.values());
+
+};
 
 
 

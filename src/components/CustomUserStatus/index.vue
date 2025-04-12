@@ -1,58 +1,91 @@
 <template>
     <view class="custom-user-status">
-        <view class="list-area" :class="{ 'has-gift-area': showGiftArea }">
-            <view class="user-box" v-for="item in list" :key="item.num">
-                <view class="user-title">
-                    <view class="user-seat">{{ item.num }}</view>
-                    <view class="user-count">
-                        <image src="@/static/images/index/user-icon.svg" class="people-icon"></image>
-                        <text>{{ item.userCount }}</text>
+        <view class="list-area" :class="{ 'has-gift-area': showGiftArea, 'full-bet-box2': gameId === 8 }">
+            <!-- 牛牛整桌瞒住 -->
+            <!-- <view v-if="gameId === 3" class="full-bet-box">
+                整桌满注
+            </view> -->
+            <view class="all-scroll">
+                <view class="user-box" v-for="item in list" :key="item.num">
+                    <view class="user-title">
+                        <view class="user-seat">{{ item.num }}</view>
+                        <view class="user-count">
+                            <image src="@/static/images/index/user-icon.svg" class="people-icon"></image>
+                            <text>{{ item.userCount }}</text>
+                        </view>
                     </view>
-                </view>
-                <view class="user-list" ref="listContainer" :data-id="item.id">
-                    <view class="user-list-scroll" :style="getScrollStyle(item)" ref="scrollContent" :data-id="item.id">
-                        <view class="user-item ignore-vh-box "
-                            :class="{ 'nn-game': gameId == 3, 'bjl-game': gameId == 1 }" v-for="num in item.numList"
-                            :key="num">
-                            <!-- 百家乐龙虎 -->
-                            <template v-if="gameId == 1">
-                                <template v-if="!num.is_cash">
-                                    <view class="user-mes ignore-vh-user-mes"
-                                        :class="{ 'color-header-1': num.area === 'banker', 'color-header-2': num.area === 'player' }">
-                                        {{ num.username }}</view>
-                                    <view class="user-result"
-                                        :class="{ 'color-content-1': num.area === 'banker', 'color-cash-2': num.area === 'player' }">
-                                        {{ `${numberWithCommas(num.amount)}(${num.count})` }}
-                                    </view>
+                    <view class="user-list" ref="listContainer" :data-id="item.id">
+                        <view class="user-list-scroll" :style="getScrollStyle(item)" ref="scrollContent"
+                            :data-id="item.id">
+                            <view class="user-item ignore-vh-box "
+                                :class="{ 'nn-game': gameId == 3, 'bjl-game': gameId == 1 }" v-for="num in 8"
+                                :key="num">
+                                <!-- 百家乐龙虎 -->
+                                <template v-if="gameId == 1">
+                                    <template v-if="!num.is_cash">
+                                        <view class="user-mes ignore-vh-user-mes"
+                                            :class="{ 'color-header-1': num.area === 'banker', 'color-header-2': num.area === 'player' }">
+                                            {{ num.username }}</view>
+                                        <view class="user-result"
+                                            :class="{ 'color-content-1': num.area === 'banker', 'color-cash-2': num.area === 'player' }">
+                                            {{ `${numberWithCommas(num.amount)}(${num.count})` }}
+                                        </view>
+                                    </template>
+                                    <!-- 现金 -->
+                                    <template v-else>
+                                        <view class="user-result color-cash-1">
+                                            {{ `CASH` }}
+                                        </view>
+                                    </template>
+                                    <CustomWarning v-if="item.warning" :active="item.warning"></CustomWarning>
+                                    <image v-if="item.isChecked" class="checked-icon"
+                                        src="@/static/images/index/right-icon.svg"></image>
                                 </template>
-                                <!-- 现金 -->
+                                <!-- 牛牛 -->
                                 <template v-else>
-                                    <view class="user-result color-cash-1">
-                                        {{ `CASH` }}
-                                    </view>
-                                </template>
-                                <CustomWarning v-if="item.warning" :active="item.warning"></CustomWarning>
-                                <image v-if="item.isChecked" class="checked-icon"
-                                    src="@/static/images/index/right-icon.svg"></image>
-                            </template>
-                            <!-- 牛牛 -->
-                            <template v-else>
-                                <template v-if="true">
-                                    <view class="user-mes ignore-vh-user-mes color-header disable-box">66666-1</view>
-                                    <view class="user-result color-content disable-box">
-                                        <view v-for="number in 3" :key="number" class="nn-content-item text-color-1 ">{{
+                                    <template v-if="true">
+                                        <view class="user-mes ignore-vh-user-mes color-header caijin">
+                                            <!-- <span>{{ 6666 - 1 }}</span> -->
+                                            <span class="full-bet">{{ '满注' }}</span>
+                                            <!-- 换庄图标 -->
+                                            <image class="changeBanker" src="@/static/images/index/changeBanker.svg">
+                                            </image>
+                                            <!-- 彩金 -->
+                                            <image class="changeBanker" src="@/static/images/index/caijin.svg">
+                                            </image>
+                                        </view>
+                                        <view class="user-result color-content caijin-content">
+                                            <!-- 未满注 -->
+                                            <view v-for="number in 1" :key="number"
+                                                class="nn-content-item text-color-1 ">{{
+                                                    `2000(2)` }}
+                                                <image class="checked-icon" src="@/static/images/index/right-icon.svg">
+                                                </image>
+                                            </view>
+                                            <!-- 单个区域满注 -->
+                                            <!-- <view class="nn-content-item text-color-1 ">{{
                                             `2000(2)` }}
                                             <image class="checked-icon" src="@/static/images/index/right-icon.svg">
                                             </image>
+                                            </view> -->
+                                            <!-- 整桌满注 -->
+                                            <!-- <view v-for="(number, nIndex) in 1" :key="number" class="nn-content-item"
+                                                :class="[`text-color-${nIndex + 1}`]">{{
+                                                    `2000(2)` }}
+                                                <image class="checked-icon" src="@/static/images/index/right-icon.svg">
+                                                </image>
+                                            </view> -->
+                                    
                                         </view>
-                                    </view>
+                                    </template>
                                 </template>
-                            </template>
-                        </view>
+                            </view>
 
+                        </view>
                     </view>
                 </view>
             </view>
+
         </view>
         <view class="user-gift-area" v-if="showGiftArea">
             <view class="gift-item" v-for="item in giftList" :key="item" :data-id="item.id">
@@ -85,11 +118,23 @@ import CustomWarning from "@/components/CustomWarning/index.vue";
 // static
 import COMMON from "@/utils/common";
 
+import { useGameeStore } from "@/store"
+const { getTableInfo } = useGameeStore();
+console.log(getTableInfo);
+const gameId = computed(() => {
+    return getTableInfo?.game_id || 1;
+})
+
+const showGiftArea = computed(() => {
+    return gameId === 1;
+})
 // 定义 props
 const props = defineProps({
     list1: {
         type: Array,
-        default: () => []
+        default: () => [
+
+        ]
     },
     commonList: {
         type: Array,
@@ -110,11 +155,7 @@ function smartUpdateList(targetList, newList) {
         })
     }
 }
-
 let list = ref(props.list1)
-
-const gameId = ref(1)
-const showGiftArea = ref(true); // 控制礼物区域的显示
 const listContainer = ref(null)
 const scrollContent = ref(null)
 // id: 唯一标识 座位标识
@@ -174,6 +215,7 @@ const calculateHeights = async () => {
 
         const container = res[0];
         const content = res[1];
+        console.log(container, content);
 
 
         // 座位容器在高度
@@ -201,7 +243,7 @@ const calculateHeights = async () => {
         list.value.forEach((item) => {
             item.maxScrollOffset = Math.max(item.contentHeight - item.containerHeight, 0);
             item.scrollSpeed = item.maxScrollOffset > 0
-                ? Math.round(item.maxScrollOffset / 5) // 平均每 30px 1 秒，可调节
+                ? Math.round(item.maxScrollOffset / 10) // 平均每 30px 1 秒，可调节
                 : 0
         })
 
@@ -273,7 +315,35 @@ watch(() => props.commonList, (newVal) => {
 }, { immediate: true, deep: true })
 // 生命周期
 onMounted(() => {
-
+    list.value = [
+        {
+            num: 1, // 座位号
+            id: 1, // 座位标识
+            scrollSpeed: 0, // 滚动速度
+            contentHeight: 0, // 内容高度
+            containerHeight: 0, // 容器高度
+            warning: false, // 是否开启警告
+            userCount: 12, // 用户数量
+        },
+        {
+            num: 2, // 座位号
+            id: 2, // 座位标识
+            scrollSpeed: 0, // 滚动速度
+            contentHeight: 0, // 内容高度
+            containerHeight: 0, // 容器高度
+            warning: false, // 是否开启警告,
+            userCount: 0, // 用户数量
+        },
+        {
+            num: 3, // 座位号
+            id: 3, // 座位标识
+            scrollSpeed: 0, // 滚动速度
+            contentHeight: 0, // 内容高度
+            containerHeight: 0, // 容器高度
+            warning: false, // 是否开启警告,
+            userCount: 0, // 用户数量
+        }
+    ]
     window.addEventListener('resize', calculateHeights)
     window.addEventListener('resize', calculateHeights2)
 
@@ -289,11 +359,37 @@ onMounted(() => {
     flex-direction: column;
     gap: 15px;
 
-    .list-area {
+    .all-scroll {
         width: 100%;
         display: flex;
         gap: 15px;
+        height: 100%;
+    }
+
+    .list-area {
+        width: 100%;
+        display: flex;
         height: calc(100% - var(--gift-area-height, 0px));
+        flex-direction: column;
+
+
+
+        .full-bet-box {
+            width: 100%;
+            height: 116px;
+            background: #6d0705;
+            color: #FFF;
+            font-family: Arial;
+            font-size: 36px;
+            font-style: normal;
+            font-weight: 700;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            // position: absolute;
+            flex-shrink: 0;
+        }
 
         .user-box {
             display: flex;
@@ -311,6 +407,7 @@ onMounted(() => {
                 justify-content: space-between;
                 max-height: 58px;
                 min-height: 58px;
+                z-index: 10086;
 
                 .user-seat {
                     background: linear-gradient(180deg, #F3DCB3 0%, #DCB57E 100%);
@@ -345,6 +442,8 @@ onMounted(() => {
                     }
                 }
             }
+
+
 
             .user-list {
                 background: rgba(0, 0, 0, 0.25);
@@ -385,6 +484,18 @@ onMounted(() => {
                         font-style: normal;
                         font-weight: 700;
                         text-transform: uppercase;
+                        position: relative;
+
+                        .changeBanker {
+                            position: absolute;
+                            width: 32px;
+                            height: 32px;
+                            right: 10px;
+                        }
+
+                        .full-bet {
+                            color: red;
+                        }
                     }
 
 
@@ -413,7 +524,7 @@ onMounted(() => {
                         width: 32px;
                         height: 32px;
                         position: absolute;
-                        right: 0;
+                        right: 10px;
                         top: 50%;
                         transform: translateY(-50%);
                     }
@@ -433,12 +544,19 @@ onMounted(() => {
                             background: #2C2823;
                         }
 
+                        // 彩金
+                        .caijin {background: #d1a626;}
+
                         .color-header-2 {
                             background: #c84034;
                         }
 
                         .color-content {
                             background: #010101;
+                        }
+
+                        .caijin-content {
+                            background: #92741b;
                         }
 
                         .color-content-2 {
@@ -517,6 +635,11 @@ onMounted(() => {
 
 
         }
+    }
+
+    .full-bet-box2 {
+        height: calc(90% - var(--gift-area-height, 0px));
+
     }
 
     .list-area.has-gift-area {
