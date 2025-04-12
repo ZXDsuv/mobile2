@@ -6,20 +6,23 @@
                     <view class="user-seat">{{ item.num }}</view>
                     <view class="user-count">
                         <image src="@/static/images/index/user-icon.svg" class="people-icon"></image>
-                        <text>11</text>
+                        <text>{{ item.userCount }}</text>
                     </view>
                 </view>
                 <view class="user-list" ref="listContainer" :data-id="item.id">
                     <view class="user-list-scroll" :style="getScrollStyle(item)" ref="scrollContent" :data-id="item.id">
                         <view class="user-item ignore-vh-box "
-                            :class="{ 'nn-game': gameId == 3, 'bjl-game': gameId == 1 }" v-for="num in item.num"
+                            :class="{ 'nn-game': gameId == 3, 'bjl-game': gameId == 1 }" v-for="num in item.numList"
                             :key="num">
                             <!-- 百家乐龙虎 -->
                             <template v-if="gameId == 1">
-                                <template v-if="true">
-                                    <view class="user-mes ignore-vh-user-mes color-header-1 ">66666-1</view>
-                                    <view class="user-result color-content-1">
-                                        {{ `${numberWithCommas(2000)}(2)` }}
+                                <template v-if="!num.is_cash">
+                                    <view class="user-mes ignore-vh-user-mes"
+                                        :class="{ 'color-header-1': num.area === 'banker', 'color-header-2': num.area === 'player' }">
+                                        {{ num.username }}</view>
+                                    <view class="user-result"
+                                        :class="{ 'color-content-1': num.area === 'banker', 'color-cash-2': num.area === 'player' }">
+                                        {{ `${numberWithCommas(num.amount)}(${num.count})` }}
                                     </view>
                                 </template>
                                 <!-- 现金 -->
@@ -46,6 +49,7 @@
                                 </template>
                             </template>
                         </view>
+
                     </view>
                 </view>
             </view>
@@ -57,9 +61,10 @@
                 </view>
                 <view class="scroll-content" :style="getScrollStyle(item)" :data-id="item.id">
                     <view class="item-content" v-for="i in item.numList" :key="i">
-                        <view class="content-header ignore-vh-24">666-1</view>
-                        <view class="content-content ignore-vh-24">{{ `100(2)` }}</view>
+                        <view class="content-header ignore-vh-24">{{ i.username }}</view>
+                        <view class="content-content ignore-vh-24">{{ `${i.amount}(${i.count})` }}</view>
                     </view>
+
                 </view>
 
             </view>
@@ -85,6 +90,10 @@ const props = defineProps({
     list1: {
         type: Array,
         default: () => []
+    },
+    commonList: {
+        type: Array,
+        default: () => []
     }
 })
 function smartUpdateList(targetList, newList) {
@@ -103,10 +112,7 @@ function smartUpdateList(targetList, newList) {
 }
 
 let list = ref(props.list1)
-watch(() => props.list1, (newVal) => {
-    
-    smartUpdateList(list.value, newVal)
-}, { immediate: true, deep: true })
+
 const gameId = ref(1)
 const showGiftArea = ref(true); // 控制礼物区域的显示
 const listContainer = ref(null)
@@ -119,9 +125,7 @@ const scrollContent = ref(null)
 // maxScrollOffset: 最大滚动偏移量
 // isChecked: 是否赔付
 
-let giftList = reactive([
-    ...COMMON.COMMON_AREA_POSITION
-])
+let giftList = ref(props.commonList)
 
 const getScrollStyle = (item) => ({
     'animation-duration': `${item.scrollSpeed}s`,
@@ -218,12 +222,11 @@ const calculateHeights2 = async () => {
         const container = res[0];
         const content = res[1];
 
-
         // 座位容器在高度
         container.forEach((item, index) => {
             const id = item.dataset.id;
 
-            giftList = giftList.map((i) => {
+            giftList.value = giftList.value.map((i) => {
                 if (i.id === id) {
                     i.containerHeight = item?.height || 0;
 
@@ -234,7 +237,7 @@ const calculateHeights2 = async () => {
 
         content.forEach((item, index) => {
             const id = item.dataset.id;
-            giftList = giftList.map((i) => {
+            giftList.value = giftList.value.map((i) => {
                 if (i.id === id) {
                     i.contentHeight = item?.height || 0;
                 }
@@ -242,7 +245,7 @@ const calculateHeights2 = async () => {
             })
         })
 
-        giftList.forEach((item) => {
+        giftList.value.forEach((item) => {
             item.maxScrollOffset = Math.max(item.contentHeight - item.containerHeight, 0);
             item.scrollSpeed = item.maxScrollOffset > 0
                 ? Math.round(item.maxScrollOffset / 5) // 平均每 30px 1 秒，可调节
@@ -254,11 +257,23 @@ const calculateHeights2 = async () => {
 
 };
 
+watch(() => props.list1, (newVal) => {
 
-// 生命周期
-onMounted(() => {
+    smartUpdateList(list.value, newVal)
     calculateHeights()
     calculateHeights2()
+
+}, { immediate: true, deep: true })
+
+watch(() => props.commonList, (newVal) => {
+    giftList.value = newVal;
+    calculateHeights2()
+    console.log(giftList.value);
+
+}, { immediate: true, deep: true })
+// 生命周期
+onMounted(() => {
+
     window.addEventListener('resize', calculateHeights)
     window.addEventListener('resize', calculateHeights2)
 

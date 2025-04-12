@@ -13,7 +13,7 @@
       </view>
       <!-- 用户下注情况 -->
       <view class="scroll-area" id="scroll-area" :style="{ 'height': scrollHeight + 'px' }">
-        <CustomUserStatus :list1="list"></CustomUserStatus>
+        <CustomUserStatus :list1="list" :commonList="commonArea"></CustomUserStatus>
       </view>
     </view>
   </LayoutCom>
@@ -47,6 +47,10 @@ const tableDetail = reactive({});
 
 const gameList = reactive(COMMON_DATA.GAME_LIST)
 
+// 公共区域
+let commonArea = ref(COMMON_DATA.COMMON_AREA_POSITION);
+console.log(commonArea.value);
+
 // 根据桌台信息带的游戏id获取当前桌子的信息
 const socketBackType = computed(() => {
   const gameId = gameList.find(item => item.gameId === tableDetail?.table?.game_id)?.gameId || 1;
@@ -78,7 +82,6 @@ const changeBindFn = () => {
 
 const initData = async () => {
   // 加入房间
-  console.log("加入房间", socketIO.isConnected());
 
   if (socketIO.isConnected()) {
 
@@ -143,14 +146,19 @@ const fenzuFn = (info, num) => {
         // 合并 numList（更新或追加 user）
         const mergedList = [...existItem.numList];
         value.forEach(newUser => {
-          const idx = mergedList.findIndex(u => u.user_id === newUser.user_id);
+
+          const idx = mergedList.findIndex(u => u.user_id === newUser.user_id && u.area === newUser.area);
           if (idx !== -1) mergedList[idx] = newUser; // 更新
           else mergedList.push(newUser); // 追加
         });
 
+        const uniqueUserIds = new Set(mergedList.map(u => u.user_id));
+        const userCount = uniqueUserIds.size;
+
         resultMap.set(numKey, {
           ...existItem,
-          numList: mergedList
+          numList: mergedList,
+          userCount
         });
       }
     });
@@ -160,12 +168,10 @@ const fenzuFn = (info, num) => {
   mergeDataToResultMap(bankerData);
   mergeDataToResultMap(playerData);
 
-  console.log("合并数据", num, { bankerData, playerData });
 
   if (Object.keys(bankerData).length === 0 && Object.keys(playerData).length === 0) {
-    
+
     resultMap.delete(+num);
-    console.log("删除----", resultMap, Object.keys(bankerData).length, Object.keys(playerData).length);
 
   }
   // 4. 直接更新 list.value（保留所有 num）
@@ -173,12 +179,35 @@ const fenzuFn = (info, num) => {
 
 };
 
+const constructCommonArea = (info) => {
+  const keys = Object.keys(info)[0];
+
+  commonArea.value = commonArea.value
+    .filter(item => {
+      // 如果 key 匹配并且 info[keys] 是空数组，就过滤掉（不保留）
+      if (item.key === keys && Array.isArray(info[keys]) && info[keys].length === 0) {
+        return false;
+      }
+      return true;
+    })
+    .map(item => {
+      const newItem = { ...item };
+      if (item.key === keys) {
+        newItem.numList = info[keys];
+      }
+      return newItem;
+    });
+
+    
+    commonArea.value = commonArea.value.filter(item => item.numList && item.numList.length > 0)
+    
+}
+
 
 // 注册socket的监听事件
 const openSocketOnEvent = () => {
   // 监听用户下注
   if (!socketBackType.value) return;
-  console.log("监听用户喜爱izhu1", socketBackType.value);
 
   socketIO.on(socketBackType.value, (data) => {
     const { info, num, table_id } = data;
@@ -186,6 +215,9 @@ const openSocketOnEvent = () => {
     // 非公共区域
     if (+num > 0) {
       fenzuFn(info, num);
+    } else {
+      // 公共区域
+      constructCommonArea(info);
     }
   });
 }
