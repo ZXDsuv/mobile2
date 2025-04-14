@@ -248,14 +248,14 @@ const constructGameNN = (data) => {
   if (!hasZero) {
     infoWithType.filter(item => item.user_id !== 0)
   }
-  console.log(infoWithType, info, numData);
   if(numData?.numList?.length > 0 && infoWithType.length > 0) {
     numData.numList = numData.numList.filter(item => {
-      const has = infoWithType.some(i => i.user_id === 0 && i.area === item.area) && numData.numList.some(i => i.user_id === 0 && i.area === item.area);
+      const has = infoWithType.every(i => i.user_id !== 0 && i.area === item.area) && numData.numList.some(i => i.user_id === 0 && i.area === item.area);
       return !has
     })
   }
 
+  console.log(numData.numList, info);
 
   // ✅ 更新当前区域的下注信息
   numData[area] = [...infoWithType];
