@@ -18,8 +18,6 @@ export const useGameeStore = defineStore('game', {
         getTableInfo(): any {
             return this.tableInfo || {} 
         }
-
-
     },
 
     actions: {

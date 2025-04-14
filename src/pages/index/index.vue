@@ -51,7 +51,6 @@ const gameList = reactive(COMMON_DATA.GAME_LIST)
 
 // 公共区域
 let commonArea = ref(COMMON_DATA.COMMON_AREA_POSITION);
-console.log(commonArea.value);
 
 // 根据桌台信息带的游戏id获取当前桌子的信息
 const socketBackType = computed(() => {
@@ -212,7 +211,6 @@ const openSocketOnEvent = () => {
   if (!socketBackType.value) return;
 
   socketIO.on(socketBackType.value, (data) => {
-    console.log(data);
 
     const { info, num, table_id } = data;
 
@@ -235,48 +233,125 @@ const openSocketOnEvent = () => {
 
 
 const constructGameNN = (data) => {
-  const { info, num, table_id, area, swap, full_bet_type } = data;
-
+  const { info = [], num, table_id, area, swap, full_bet_type } = data;
   const numKey = +num;
   const numData = nnGameList.value.get(numKey) || {};
 
-  // 更新对应区域下注信息
-  numData[area] = [...info];
+  // 添加 fullBetType 到每条 info 数据
+  const infoWithType = info.map(item => ({
+    ...item,
+    fullBetType: full_bet_type
+  }));
 
-  // 构造每个座位每个用户的下注信息
-  const userBetList = numData['userList'] || [];
-  numData[area].forEach((item, index) => {
-    // 是否存在用户信息了
-    const hasUser = userBetList.find(user => user.user_id === item.user_id);
-    const hasArea = hasUser.areaList.some(area => area.area === area);
-    if(hasUser && hasArea) {
-      // 更新
-      const userIndex = userBetList.findIndex(user => user.user_id === item.user_id);
-      userBetList[userIndex][area] = item;
+  // 如果 info 有的数据原来没有了需要更新
+  const hasZero = info.some(item => item.user_id === 0);
+  if (!hasZero) {
+    infoWithType.filter(item => item.user_id !== 0)
+  }
+  console.log(infoWithType, info, numData);
+  if(numData?.numList?.length > 0 && infoWithType.length > 0) {
+    numData.numList = numData.numList.filter(item => {
+      const has = infoWithType.some(i => i.user_id === 0 && i.area === item.area) && numData.numList.some(i => i.user_id === 0 && i.area === item.area);
+      return !has
+    })
+  }
+
+
+  // ✅ 更新当前区域的下注信息
+  numData[area] = [...infoWithType];
+  // numData.numList = numData?.numList?.filter(item => {
+  //   const has = infoWithType.some(i => i.user_id === 0 && i.area === item.area);
+  //   return has
+  // })
+
+  // ✅ 构建/更新用户下注数据
+  const userBetList = numData.numList || [];
+
+  infoWithType.forEach(item => {
+    let user = userBetList.find(u => u.user_id === item.user_id);
+
+    if (user) {
+      const areaIndex = user.areaList.findIndex(a => a.area === area);
+
+      if (areaIndex > -1) {
+        // 更新该区域下注
+        user.areaList.splice(areaIndex, 1, item);
+      } else {
+        // 新增该区域下注
+        user.areaList.push(item);
+      }
+    } else {
+      // 新增用户
+      userBetList.push({
+        user_id: item.user_id,
+        ...item,
+        areaList: [item]
+      });
     }
-  })
+  });
 
-  // 公共字段更新
+  // ✅ 如果 info 是空数组，说明该区域被清空了，移除所有用户的对应区域下注
+  if (info.length === 0) {
+    userBetList.forEach(user => {
+      if (user.areaList) {
+        user.areaList = user.areaList.filter(a => a.area !== area);
+      }
+    });
+  }
+
+  // ✅ 更新公共数据
   Object.assign(numData, {
     swap,
     full_bet_type,
     table_id,
     num: numKey,
-    userList: userBetList
+    numList: userBetList,
+    userCount: userBetList.length
   });
 
-
-
+  // ✅ 设置更新回 map
   nnGameList.value.set(numKey, numData);
 
-
-  // 更新 map
-  nnGameList.value.set(numKey, numData);
+  // ✅ 生成游戏列表并处理满注可见性
   const gameArray = Array.from(nnGameList.value.values());
+  const fullBetData = handleFullBetData(gameArray, area, num);
 
+  // ✅ 过滤空数据
+  list.value = fullBetData.filter(item => item.num !== 0 && item.userCount !== 0);
+};
+
+const handleFullBetData = (gameArray, area, num) => {
+  return gameArray.map(game => {
+    if (game.num === +num) {
+      game.numList = game.numList.map(user => ({
+        ...user,
+        areaList: user.areaList.map(a => ({
+          ...a,
+          hiddenByFullBet: a.fullBetType !== 0
+        }))
+      }));
+    }
+    return game;
+  });
 };
 
 
+const fullBetTypeFn = (numData) => {
+  console.log(numData);
+
+  let arr1 = JSON.parse(JSON.stringify(numData));
+  const arr = arr1?.equal?.concat(arr1?.double).concat(arr1?.super);
+  const hasFull = arr?.some(item => item?.fullBetType === 3); // 全场
+  if (hasFull) return 3; // 全场
+
+  const singleFull = arr?.some(item => item?.fullBetType === 1); // 单
+  if (singleFull) return 1; // 单
+
+  const doubleFull = arr?.every(item => item?.fullBetType === 0); // 无
+  if (doubleFull) return 0; // 无
+
+  return 0
+}
 
 
 onMounted(() => {

@@ -6,7 +6,7 @@
                 整桌满注
             </view> -->
             <view class="all-scroll">
-                <view class="user-box" v-for="item in list" :key="item.num">
+                <view class="user-box" v-for="(item, i) in list" :key="item.i">
                     <view class="user-title">
                         <view class="user-seat">{{ item.num }}</view>
                         <view class="user-count">
@@ -15,13 +15,17 @@
                         </view>
                     </view>
                     <view class="user-list" ref="listContainer" :data-id="item.id">
+
                         <view class="user-list-scroll" :style="getScrollStyle(item)" ref="scrollContent"
                             :data-id="item.id">
-                            <view class="user-item ignore-vh-box "
-                                :class="{ 'nn-game': gameId == 3, 'bjl-game': gameId == 1 }" v-for="num in 8"
-                                :key="num">
+
+                            <view class="user-item ignore-vh-box"
+                                :class="{ 'nn-game': gameId == 3, 'bjl-game': gameId == 1 }"
+                                v-for="(num, numIndex) in numListGet(item.numList)" :key="numIndex">
                                 <!-- 百家乐龙虎 -->
+
                                 <template v-if="gameId == 1">
+
                                     <template v-if="!num.is_cash">
                                         <view class="user-mes ignore-vh-user-mes"
                                             :class="{ 'color-header-1': num.area === 'banker', 'color-header-2': num.area === 'player' }">
@@ -44,30 +48,34 @@
                                 <!-- 牛牛 -->
                                 <template v-else>
                                     <template v-if="true">
-                                        <view class="user-mes ignore-vh-user-mes color-header caijin">
-                                            <!-- <span>{{ 6666 - 1 }}</span> -->
-                                            <span class="full-bet">{{ '满注' }}</span>
+                                        <view class="user-mes ignore-vh-user-mes color-header">
+                                            <span v-if="showNomal(num.areaList)">{{ num.username }}</span>
+                                            <span class="full-bet" v-else-if="num.fullBetType === 1">{{ '满注' }}</span>
                                             <!-- 换庄图标 -->
-                                            <image class="changeBanker" src="@/static/images/index/changeBanker.svg">
+                                            <image v-if="isSwap(num.user_id, item)" class="changeBanker"
+                                                src="@/static/images/index/changeBanker.svg">
                                             </image>
                                             <!-- 彩金 -->
-                                            <image class="changeBanker" src="@/static/images/index/caijin.svg">
+                                            <image v-if="num.caijin" class="changeBanker"
+                                                src="@/static/images/index/caijin.svg">
                                             </image>
                                         </view>
-                                        <view class="user-result color-content caijin-content">
+                                        <view class="user-result color-content">
                                             <!-- 未满注 -->
-                                            <view v-for="number in 1" :key="number"
-                                                class="nn-content-item text-color-1 ">{{
-                                                    `2000(2)` }}
+                                            <view v-for="(number, nIndex) in showNumberArea(num.areaList)" :key="nIndex"
+                                                class="nn-content-item" :class="getColorClass(number.area)">{{
+                                                    `${number.amount}(${number.count})` }}
+                                                <image v-if="number.is_checkout" class="checked-icon"
+                                                    src="@/static/images/index/right-icon.svg">
+                                                </image>
+                                            </view>
+
+                                            <!-- 单个区域满注 -->
+                                            <view class="nn-content-item text-color-1 " v-if="num.user_id == 0">{{
+                                                `2000(2)` }}
                                                 <image class="checked-icon" src="@/static/images/index/right-icon.svg">
                                                 </image>
                                             </view>
-                                            <!-- 单个区域满注 -->
-                                            <!-- <view class="nn-content-item text-color-1 ">{{
-                                            `2000(2)` }}
-                                            <image class="checked-icon" src="@/static/images/index/right-icon.svg">
-                                            </image>
-                                            </view> -->
                                             <!-- 整桌满注 -->
                                             <!-- <view v-for="(number, nIndex) in 1" :key="number" class="nn-content-item"
                                                 :class="[`text-color-${nIndex + 1}`]">{{
@@ -75,7 +83,7 @@
                                                 <image class="checked-icon" src="@/static/images/index/right-icon.svg">
                                                 </image>
                                             </view> -->
-                                    
+
                                         </view>
                                     </template>
                                 </template>
@@ -155,6 +163,15 @@ function smartUpdateList(targetList, newList) {
         })
     }
 }
+
+const showNomal = (numList) => {
+   // 全部的fullBetType 都等于 0 ，那么就显示
+   return numList.some(item => item.fullBetType === 0) 
+}
+const numListGet = (numList) => {
+    // 如果item.areaList每一个都 == 0，那么
+    return numList.filter(item => item.user_id == 0 || !item.areaList.every(area => area.fullBetType > 0))
+}
 let list = ref(props.list1)
 const listContainer = ref(null)
 const scrollContent = ref(null)
@@ -176,6 +193,10 @@ const getScrollStyle = (item) => ({
     '--max-scroll-offset': `${Math.max(item.contentHeight - item.containerHeight, 0)}px`
 })
 
+
+const showNumberArea = (list) => {
+    return list.filter((item) => !item.hiddenByFullBet)
+}
 
 // const calculateHeights = async () => {
 //     await nextTick();
@@ -215,7 +236,6 @@ const calculateHeights = async () => {
 
         const container = res[0];
         const content = res[1];
-        console.log(container, content);
 
 
         // 座位容器在高度
@@ -299,9 +319,30 @@ const calculateHeights2 = async () => {
 
 };
 
+const getColorClass = (area) => {
+    switch (area) {
+        case 'equal':
+            return 'text-color-1';
+        case 'double':
+            return 'text-color-2';
+        case 'super':
+            return 'text-color-3';
+        default:
+            return ''; // 或者其他默认样式
+    }
+}
+
+const isSwap = (user_id, item) => {
+    const eR = item?.equal?.find(i => i.swap);
+    const dR = item?.double?.find(i => i.swap);
+    const sR = item?.super?.find(i => i.swap);
+    const swap = eR || dR || sR;
+    return swap
+}
+
 watch(() => props.list1, (newVal) => {
 
-    smartUpdateList(list.value, newVal)
+    gameId == 1 ? smartUpdateList(list.value, newVal) : (list.value = newVal);
     calculateHeights()
     calculateHeights2()
 
@@ -315,35 +356,35 @@ watch(() => props.commonList, (newVal) => {
 }, { immediate: true, deep: true })
 // 生命周期
 onMounted(() => {
-    list.value = [
-        {
-            num: 1, // 座位号
-            id: 1, // 座位标识
-            scrollSpeed: 0, // 滚动速度
-            contentHeight: 0, // 内容高度
-            containerHeight: 0, // 容器高度
-            warning: false, // 是否开启警告
-            userCount: 12, // 用户数量
-        },
-        {
-            num: 2, // 座位号
-            id: 2, // 座位标识
-            scrollSpeed: 0, // 滚动速度
-            contentHeight: 0, // 内容高度
-            containerHeight: 0, // 容器高度
-            warning: false, // 是否开启警告,
-            userCount: 0, // 用户数量
-        },
-        {
-            num: 3, // 座位号
-            id: 3, // 座位标识
-            scrollSpeed: 0, // 滚动速度
-            contentHeight: 0, // 内容高度
-            containerHeight: 0, // 容器高度
-            warning: false, // 是否开启警告,
-            userCount: 0, // 用户数量
-        }
-    ]
+    // list.value = [
+    //     {
+    //         num: 1, // 座位号
+    //         id: 1, // 座位标识
+    //         scrollSpeed: 0, // 滚动速度
+    //         contentHeight: 0, // 内容高度
+    //         containerHeight: 0, // 容器高度
+    //         warning: false, // 是否开启警告
+    //         userCount: 12, // 用户数量
+    //     },
+    //     {
+    //         num: 2, // 座位号
+    //         id: 2, // 座位标识
+    //         scrollSpeed: 0, // 滚动速度
+    //         contentHeight: 0, // 内容高度
+    //         containerHeight: 0, // 容器高度
+    //         warning: false, // 是否开启警告,
+    //         userCount: 0, // 用户数量
+    //     },
+    //     {
+    //         num: 3, // 座位号
+    //         id: 3, // 座位标识
+    //         contentHeight: 0, // 内容高度
+    //         containerHeight: 0, // 容器高度
+    //         warning: false, // 是否开启警告,
+    //         userCount: 0, // 用户数量
+    //           scrollSpeed: 0, // 滚动速度
+    //   }
+    // ]
     window.addEventListener('resize', calculateHeights)
     window.addEventListener('resize', calculateHeights2)
 
@@ -545,7 +586,9 @@ onMounted(() => {
                         }
 
                         // 彩金
-                        .caijin {background: #d1a626;}
+                        .caijin {
+                            background: #d1a626;
+                        }
 
                         .color-header-2 {
                             background: #c84034;
