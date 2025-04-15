@@ -13,7 +13,7 @@
       </view>
       <!-- 用户下注情况 -->
       <view class="scroll-area" id="scroll-area" :style="{ 'height': scrollHeight + 'px' }">
-        <CustomUserStatus :list1="list" :commonList="commonArea"></CustomUserStatus>
+        <CustomUserStatus :list1="list" :commonList="commonArea" :fullType="fullType" :fullList="fullList"></CustomUserStatus>
       </view>
     </view>
   </LayoutCom>
@@ -153,7 +153,7 @@ const fenzuFn = (info, num) => {
           else mergedList.push(newUser); // 追加
         });
 
-        const uniqueUserIds = new Set(mergedList.map(u => u.user_id));
+        const uniqueUserIds = new Set(mergedList.map(u => u.user_id && u.user_id !== 0));
         const userCount = uniqueUserIds.size;
 
         resultMap.set(numKey, {
@@ -231,9 +231,14 @@ const openSocketOnEvent = () => {
   });
 }
 
+let fullType = ref(0);
+let fullList = ref([]);
 
 const constructGameNN = (data) => {
   const { info = [], num, table_id, area, swap, full_bet_type } = data;
+  // 如果area == common的清空，判断full_bet_type是不是等于3，如果等于3，则把所有数据的fullBetType设置为3
+
+
   const numKey = +num;
   const numData = nnGameList.value.get(numKey) || {};
 
@@ -243,26 +248,11 @@ const constructGameNN = (data) => {
     fullBetType: full_bet_type
   }));
 
-  // 如果 info 有的数据原来没有了需要更新
-  const hasZero = info.some(item => item.user_id === 0);
-  if (!hasZero) {
-    infoWithType.filter(item => item.user_id !== 0)
-  }
-  if(numData?.numList?.length > 0 && infoWithType.length > 0) {
-    numData.numList = numData.numList.filter(item => {
-      const has = infoWithType.every(i => i.user_id !== 0 && i.area === item.area) && numData.numList.some(i => i.user_id === 0 && i.area === item.area);
-      return !has
-    })
-  }
 
-  console.log(numData.numList, info);
+
 
   // ✅ 更新当前区域的下注信息
   numData[area] = [...infoWithType];
-  // numData.numList = numData?.numList?.filter(item => {
-  //   const has = infoWithType.some(i => i.user_id === 0 && i.area === item.area);
-  //   return has
-  // })
 
   // ✅ 构建/更新用户下注数据
   const userBetList = numData.numList || [];
@@ -299,25 +289,51 @@ const constructGameNN = (data) => {
     });
   }
 
+  const tList = userBetList.filter(item => {
+    if (item.user_id === 0) {
+      const isNo = numData[item.area]?.some(i => i.user_id === 0)
+      if (isNo) {
+        return true
+      }
+      return false
+    }
+    return true
+  })
+
+
   // ✅ 更新公共数据
   Object.assign(numData, {
     swap,
     full_bet_type,
     table_id,
     num: numKey,
-    numList: userBetList,
-    userCount: userBetList.length
+    numList: tList,
+    userCount: tList.length
   });
 
+
+
+
   // ✅ 设置更新回 map
+
+
   nnGameList.value.set(numKey, numData);
 
   // ✅ 生成游戏列表并处理满注可见性
   const gameArray = Array.from(nnGameList.value.values());
   const fullBetData = handleFullBetData(gameArray, area, num);
+  fullType.value = fullBetData.some(i => i.full_bet_type == 3) ? 3 : 0
+  if (fullType.value == 3 && area === 'common') {
+    fullList.value = groupBy(info, 'num');
+    console.log(fullList.value);
+    
+  }
+
 
   // ✅ 过滤空数据
-  list.value = fullBetData.filter(item => item.num !== 0 && item.userCount !== 0);
+  list.value = fullBetData.filter(item => item.userCount !== 0);
+
+
 };
 
 const handleFullBetData = (gameArray, area, num) => {
