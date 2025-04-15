@@ -22,7 +22,7 @@
 </template>
 
 <script setup>
-import { onHide } from '@dcloudio/uni-app';
+import { onHide, onShow } from '@dcloudio/uni-app';
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 //com
 import CustomUserStatus from '@/components/CustomUserStatus/index.vue';
@@ -101,6 +101,7 @@ const initData = async () => {
 
   // 注册socket的监听事件
   openSocketOnEvent();
+  openResult()
 }
 
 // 通用的合并函数
@@ -211,7 +212,9 @@ const openSocketOnEvent = () => {
   // 监听用户下注
   if (!socketBackType.value) return;
 
+  // 下注状态
   socketIO.on(socketBackType.value, (data) => {
+    console.log('下注状态==》', data);
 
     const { info, num, table_id } = data;
 
@@ -230,6 +233,41 @@ const openSocketOnEvent = () => {
     }
 
   });
+
+
+
+
+
+
+}
+
+const openResult = () => {
+  // 由下注状态进入赔付状态
+  socketIO.on('open-result', (data) => {
+    closeSocketByKey(socketBackType.value);
+    console.log('进入赔付状态==》open-result', data);
+    openDoBet();
+    openBack();
+  });
+}
+
+const openDoBet = () => {
+  // 在赔付状态中监听赔付结果
+  socketIO.on('do-bet-success-back', (data) => {
+    console.log('赔付结果==》do-bet-success-back', data);
+
+  })
+}
+
+const openBack = () => {
+  // 由赔付状态返回下注状态
+  socketIO.on('chip-in-back', (data) => {
+    console.log('由赔付状态返回下注状态==》chip-in-back', data);
+    openSocketOnEvent();
+    openResult()
+  });
+
+
 }
 
 let fullType = ref(0);
@@ -394,13 +432,11 @@ const constructGameNN = (data) => {
       }
     })
     fullList.value = res
-    console.log(fullList.value);
-    
+
   } else {
     // ✅ 过滤空数据
     list.value = fullBetData.filter(item => item.userCount !== 0);
-    console.log(list.value);
-    
+
   }
 
 
@@ -424,7 +460,6 @@ const handleFullBetData = (gameArray, area, num) => {
 
 
 const fullBetTypeFn = (numData) => {
-  console.log(numData);
 
   let arr1 = JSON.parse(JSON.stringify(numData));
   const arr = arr1?.equal?.concat(arr1?.double).concat(arr1?.super);
@@ -455,8 +490,26 @@ onMounted(() => {
 
 onHide(() => {
   uni.offWindowResize(calcScrollHeight);
-  socketBackType.value && socketIO.off(socketBackType.value);
+  closeSocketByKey(socketBackType.value)
+  closeSocketByKey('open-result')
+  closeSocketByKey('do-bet-success-back')
+  closeSocketByKey('chip-in-back')
+
 })
+
+onShow(() => {
+  // calcScrollHeight();
+  // 初始化
+  initData()
+  // 监听窗口变化
+  uni.onWindowResize(() => {
+    calcScrollHeight();
+  });
+})
+
+const closeSocketByKey = (key) => {
+  key && socketIO.off(key);
+}
 
 
 </script>
