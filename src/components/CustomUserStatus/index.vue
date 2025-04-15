@@ -9,16 +9,52 @@
                 <template v-if="fullType == 3">
                     <view class="user-box" v-for="(item, i) in fullList" :key="item">
                         <view class="user-title">
-                            <view class="user-seat">{{ i }}</view>
+                            <view class="user-seat">{{ item.num }}</view>
                             <view class="user-count">
                                 <image src="@/static/images/index/user-icon.svg" class="people-icon"></image>
                                 <text>{{ 0 }}</text>
                             </view>
                         </view>
-                        <view class="user-list" ref="listContainer" :data-id="item.id">
-
+                        <view class="user-list" ref="listContainer" :data-id="item.num">
                             <view class="user-list-scroll" :style="getScrollStyle(item)" ref="scrollContent"
-                                :data-id="item.id">
+                                :data-id="item.num">
+                                <view class="user-item ignore-vh-box"
+                                    :class="{ 'nn-game': gameId == 3, 'bjl-game': gameId == 1 }"
+                                    v-for="(num, numIndex) in item.caijinData" :key="numIndex">
+                                    <!-- 牛牛 -->
+                                    <template v-if="gameId == 3">
+                                        <template v-if="true">
+                                            <view class="user-mes ignore-vh-user-mes color-header"
+                                                :class="{ 'caijin': num.area == 'jackpot' }">
+                                                <span>{{ num.username
+                                                    }}</span>
+                                                <!-- 换庄图标 -->
+                                                <image v-if="isSwap(num.user_id, item)" class="changeBanker"
+                                                    src="@/static/images/index/changeBanker.svg">
+                                                </image>
+                                                <!-- 彩金 -->
+                                                <image v-if="num.area === 'jackpot'" class="changeBanker"
+                                                    src="@/static/images/index/caijin.svg">
+                                                </image>
+                                            </view>
+
+                                            <view class="user-result color-content"
+                                                :class="{ 'caijin-content': num.area === 'jackpot' }">
+                                                <!-- 整桌满注 -->
+                                                <template v-if="fullType == 3">
+                                                    <view v-for="(number, nIndex) in showNumberArea(num.areaList)"
+                                                        :key="nIndex" class="nn-content-item"
+                                                        :class="getColorClass(number.area)">{{
+                                                            `${number.amount}(${number.count})` }}
+                                                        <image v-if="number.is_checkout" class="checked-icon"
+                                                            src="@/static/images/index/right-icon.svg">
+                                                        </image>
+                                                    </view>
+                                                </template>
+                                            </view>
+                                        </template>
+                                    </template>
+                                </view>
 
                                 <view class="user-item ignore-vh-box"
                                     :class="{ 'nn-game': gameId == 3, 'bjl-game': gameId == 1 }"
@@ -26,7 +62,8 @@
                                     <!-- 牛牛 -->
                                     <template v-if="gameId == 3">
                                         <template v-if="true">
-                                            <view class="user-mes ignore-vh-user-mes color-header">
+                                            <view class="user-mes ignore-vh-user-mes color-header"
+                                                :class="{ 'caijin': num.area == 'jackpot' }">
                                                 <span class="full-bet">{{ '满注'
                                                     }}</span>
                                                 <!-- 换庄图标 -->
@@ -34,14 +71,15 @@
                                                     src="@/static/images/index/changeBanker.svg">
                                                 </image>
                                                 <!-- 彩金 -->
-                                                <image v-if="num.caijin" class="changeBanker"
+                                                <image v-if="num.area === 'jackpot'" class="changeBanker"
                                                     src="@/static/images/index/caijin.svg">
                                                 </image>
                                             </view>
-                                            <view class="user-result color-content">
+                                            <view class="user-result color-content"
+                                                :class="{ 'caijin-content': num.area === 'jackpot' }">
                                                 <!-- 整桌满注 -->
                                                 <template v-if="fullType == 3">
-                                                    <view v-for="(number, nIndex) in item" :key="number"
+                                                    <view v-for="(number, nIndex) in item.fullData" :key="number"
                                                         class="nn-content-item" :class="[`text-color-${nIndex + 1}`]">{{
                                                             `${number.amount}(${number.count})` }}
                                                         <image class="checked-icon" v-if="number.isChecked"
@@ -99,7 +137,8 @@
                                     <!-- 牛牛 -->
                                     <template v-else>
                                         <template v-if="true">
-                                            <view class="user-mes ignore-vh-user-mes color-header">
+                                            <view class="user-mes ignore-vh-user-mes color-header"
+                                                :class="{ 'caijin': num.area == 'jackpot' }">
                                                 <span v-if="showNomal(num.areaList)">{{ num.username }}</span>
                                                 <span class="full-bet" v-else-if="num.fullBetType === 1">{{ '满注'
                                                     }}</span>
@@ -108,11 +147,12 @@
                                                     src="@/static/images/index/changeBanker.svg">
                                                 </image>
                                                 <!-- 彩金 -->
-                                                <image v-if="num.caijin" class="changeBanker"
+                                                <image v-if="num.area == 'jackpot'" class="changeBanker"
                                                     src="@/static/images/index/caijin.svg">
                                                 </image>
                                             </view>
-                                            <view class="user-result color-content">
+                                            <view class="user-result color-content"
+                                                :class="{ 'caijin-content': num.area == 'jackpot' }">
                                                 <template v-if="fullType == 0">
                                                     <!-- 未满注 -->
                                                     <view v-for="(number, nIndex) in showNumberArea(num.areaList)"
@@ -144,7 +184,7 @@
                                                 </template>
                                             </view>
                                         </template>
-                                        
+
                                     </template>
                                 </view>
 
@@ -189,7 +229,6 @@ import COMMON from "@/utils/common";
 
 import { useGameeStore } from "@/store"
 const { getTableInfo } = useGameeStore();
-console.log(getTableInfo);
 const gameId = computed(() => {
     return getTableInfo?.game_id || 1;
 })
@@ -239,7 +278,6 @@ const showNomal = (numList) => {
     return numList?.some(item => item.fullBetType === 0)
 }
 const numListGet = (numList) => {
-    console.log(numList);
 
     // 如果item.areaList每一个都 == 0，那么
     if (props.fullType == 3) {

@@ -13,7 +13,8 @@
       </view>
       <!-- 用户下注情况 -->
       <view class="scroll-area" id="scroll-area" :style="{ 'height': scrollHeight + 'px' }">
-        <CustomUserStatus :list1="list" :commonList="commonArea" :fullType="fullType" :fullList="fullList"></CustomUserStatus>
+        <CustomUserStatus :list1="list" :commonList="commonArea" :fullType="fullType" :fullList="fullList">
+        </CustomUserStatus>
       </view>
     </view>
   </LayoutCom>
@@ -311,27 +312,97 @@ const constructGameNN = (data) => {
     userCount: tList.length
   });
 
-
-
-
   // ✅ 设置更新回 map
-
-
   nnGameList.value.set(numKey, numData);
+  // 如果value的jackpot属性是空数组或者没有，需要将value里的numList数组中的area为jackpot的对象删掉
+
+  // 如果value的jackpot属性的数组长度大于0，那么需要根据jackpot属性的对象数组中的对象的user_id,在value的numList寻找有没有user_id相等且area为jackpot的对象
+  // .如果有，那么将value的numList中的对象的area为jackpot的对象的全部属性的值替换成value的jackpot属性的对象的全部属性的值;
+  // 如果没有area == jackpot但是有user_id跟value中的jackpot中的对象的user_id有相同的，则需要在numList中新增一个对象，对象的属性值为原numList数组中对象的user_id与jackpot中对象的user_id相同
+  // 的全部属性，并且area设置为jackpot，然后更新该areaList，将value中的jackpot属性的对象添加到numList中新增的对象中的areaList中;
+  // 如果没有area == jackpot且没有user_id跟value中的jackpot中的对象的user_id有相同的，则需要在numList中新增一个对象，对象的属性值为原numList数组中对象的user_id与jackpot中对象的user_id相同的全部属性，并且area设置为jackpot，然后更新该areaList，将value中的jackpot属性的对象添加到numList中新增的对象中的areaList中;
+  nnGameList.value.forEach((value, key) => {
+    if (value.jackpot) {
+      if (value.jackpot.length === 0) {
+        // 移除 numList 中 area 为 jackpot 的对象
+        value.numList = value.numList.filter(item => item.area !== 'jackpot');
+
+      } else {
+        value.jackpot.forEach(item => {
+          // 查找是否已有相同 user_id 的用户
+          const user = value.numList.find(u => u.user_id === item.user_id && u.area === 'jackpot');
+          if (user) {
+            const numListAreaIndex = value.numList.findIndex(a => a.area === 'jackpot' && a.user_id === item.user_id);
+            if (numListAreaIndex > -1) {
+              const areaIndex = user.areaList?.findIndex(a => a.area === 'jackpot' && a.user_id === item.user_id);
+
+              user.areaList.splice(areaIndex, 1, item);
+            } else {
+              user.areaList.push({
+                ...item,
+                area: 'jackpot',
+                areaList: [item]
+              }); // 新增一个带 jackpot 属性的对象到 areaList 中
+            }
+
+          } else {
+            // 没有找到用户，则直接新增
+            value.numList.push({
+              ...item,
+              area: 'jackpot',
+              areaList: [item]
+            });
+          }
+        });
+        // 删除numList中每个对象中的areaList中的对象，numList中每个对象中的areaList中的对象的area与numList对象的area不一致，则删除该对象
+        value.numList.forEach(item => {
+          item.areaList = item.areaList.filter(a => a.area === item.area);
+        });
+
+        // 对numList数组进行排序，area == 'jackpot'的对象排在前面, 排序之后再根据user_id进行排序，大的在后
+
+        value.numList.sort((a, b) => {
+          if (a.area === 'jackpot' && b.area !== 'jackpot') return -1;
+          if (a.area !== 'jackpot' && b.area === 'jackpot') return 1;
+          return b.user_id - a.user_id;
+        })
+
+
+      }
+      nnGameList.value.set(key, value);
+
+    }
+  });
+
 
   // ✅ 生成游戏列表并处理满注可见性
   const gameArray = Array.from(nnGameList.value.values());
-  const fullBetData = handleFullBetData(gameArray, area, num);
+  let fullBetData = handleFullBetData(gameArray, area, num);
+  // ✅ 计算满注类型
   fullType.value = fullBetData.some(i => i.full_bet_type == 3) ? 3 : 0
   if (fullType.value == 3 && area === 'common') {
     fullList.value = groupBy(info, 'num');
+    // 重新构造数据，将座位彩金相关添加到
+    // 遍历fullList.value，将fullList.value中的每个对象的numList数组中的对象的area为seat_cash的对象的全部属性的值替换成fullList.value中对象的全部属性的值;
+    const res = Object.keys(fullList.value).map(key => {
+      const fullData = fullList.value[key];
+      const caijinData = fullBetData.find(i => i.num === +key)?.numList?.filter(i => i.area === 'jackpot') || [];
+      return {
+        num: +key,
+        fullData,
+        caijinData
+      }
+    })
+    fullList.value = res
     console.log(fullList.value);
+    
+  } else {
+    // ✅ 过滤空数据
+    list.value = fullBetData.filter(item => item.userCount !== 0);
+    console.log(list.value);
     
   }
 
-
-  // ✅ 过滤空数据
-  list.value = fullBetData.filter(item => item.userCount !== 0);
 
 
 };
