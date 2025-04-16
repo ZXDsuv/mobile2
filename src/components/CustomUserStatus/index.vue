@@ -6,7 +6,7 @@
                 整桌满注
             </view>
             <view class="all-scroll">
-                <template v-if="fullType == 3">
+                <template v-if="fullType == 3 && gameId === 3">
                     <view class="user-box" v-for="(item, i) in fullList" :key="item">
                         <view class="user-title">
                             <view class="user-seat">{{ item.num }}</view>
@@ -86,7 +86,21 @@
                                                             src="@/static/images/index/right-icon.svg">
                                                         </image>
                                                     </view>
+
                                                 </template>
+                                            </view>
+
+                                            <view class="user-mes ignore-vh-user-mes cash-box"
+                                                :class="[`cash-${cashItem.area}`]" v-for="cashItem in item.cashData"
+                                                :key="cashItem">
+                                                <text class="title">
+                                                    {{ cashItem.area == 'equal' ? '平倍' : cashItem.area == 'double' ?
+                                                        '翻倍'
+                                                        : '超倍' }}
+                                                </text>
+                                                <text class="content">
+                                                    CASH
+                                                </text>
                                             </view>
                                         </template>
                                     </template>
@@ -118,7 +132,7 @@
                                         <template v-if="!num.is_cash">
                                             <view class="user-mes ignore-vh-user-mes"
                                                 :class="{ 'color-header-1': num.area === 'banker', 'color-header-2': num.area === 'player' }">
-                                                {{ num.username }}</view>
+                                                {{ num.full_bet ? '满注' : num.username }}</view>
                                             <view class="user-result"
                                                 :class="{ 'color-content-1': num.area === 'banker', 'color-cash-2': num.area === 'player' }">
                                                 {{ `${numberWithCommas(num.amount)}(${num.count})` }}
@@ -136,11 +150,11 @@
                                     </template>
                                     <!-- 牛牛 -->
                                     <template v-else>
-                                        <template v-if="true">
+                                        <template v-if="num.is_cash !== 1">
                                             <view class="user-mes ignore-vh-user-mes color-header"
                                                 :class="{ 'caijin': num.area == 'jackpot' }">
                                                 <span v-if="showNomal(num.areaList)">{{ num.username }}</span>
-                                                <span class="full-bet" v-else-if="num.fullBetType === 1">{{ '满注'
+                                                <span class="full-bet" v-else-if="num.fullBetType === 1 && num.is_cash !== 1">{{ '满注'
                                                     }}</span>
                                                 <!-- 换庄图标 -->
                                                 <image v-if="isSwap(num.user_id, item)" class="changeBanker"
@@ -184,6 +198,22 @@
                                                 </template>
                                             </view>
                                         </template>
+                                        <template v-else>
+                                            <view class="user-mes ignore-vh-user-mes cash-box"
+                                                :class="[`cash-${num.area}`]">
+                                                <text class="title">
+                                                    {{ num.area == 'equal' ? '平倍' : num.area == 'double' ?
+                                                        '翻倍'
+                                                        : '超倍' }}
+                                                </text>
+                                                <text class="content">
+                                                    CASH
+                                                </text>
+                                                <image v-if="isSwap(num.user_id, item)" class="changeBanker"
+                                                    src="@/static/images/index/changeBanker.svg">
+                                                </image>
+                                            </view>
+                                        </template>
 
                                     </template>
                                 </view>
@@ -203,7 +233,7 @@
                 </view>
                 <view class="scroll-content" :style="getScrollStyle(item)" :data-id="item.id">
                     <view class="item-content" v-for="i in item.numList" :key="i">
-                        <view class="content-header ignore-vh-24">{{ i.username }}</view>
+                        <view class="content-header ignore-vh-24">{{ i.full_bet ? '满注' : i.username }}</view>
                         <view class="content-content ignore-vh-24">{{ `${i.amount}(${i.count})` }}</view>
                     </view>
 
@@ -278,7 +308,8 @@ const showNomal = (numList) => {
     return numList?.some(item => item.fullBetType === 0)
 }
 const numListGet = (numList) => {
-
+    
+    if (gameId.value !== 3) return numList;
     // 如果item.areaList每一个都 == 0，那么
     if (props.fullType == 3) {
         return [{
@@ -468,7 +499,6 @@ watch(() => props.list1, (newVal) => {
 watch(() => props.commonList, (newVal) => {
     giftList.value = newVal;
     calculateHeights2()
-    console.log(giftList.value);
 
 }, { immediate: true, deep: true })
 // 生命周期
@@ -656,6 +686,26 @@ onMounted(() => {
                         }
                     }
 
+                    .cash-box {
+                        display: flex;
+                        flex-direction: column;
+                        height: 88px;
+                    }
+
+                    .cash-equal {
+                        border-bottom: 1px solid #C0C0C0;
+                        background: linear-gradient(180deg, #093CD9 0%, #052073 100%);
+                    }
+
+                    .cash-double {
+                        border-bottom: 1px solid #C0C0C0;
+                        background: linear-gradient(180deg, #E54D00 0%, #872302 100%);
+                    }
+
+                    .cash-super {
+                        border-bottom: 1px solid #C0C0C0;
+                        background: linear-gradient(180deg, #E8AF00 0%, #805602 100%);
+                    }
 
 
                     .user-result {

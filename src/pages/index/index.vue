@@ -248,6 +248,24 @@ const openResult = () => {
     console.log('进入赔付状态==》open-result', data);
     openDoBet();
     openBack();
+    // 下一局
+    openNext()
+  });
+}
+
+const openNext = () => {
+  // 由下注状态进入赔付状态
+  socketIO.on('start-bet', (data) => {
+    console.log('开始下注停止下注==》start-bet', data);
+    const { status } = data;
+    if (status == 1) {
+      // 注册socket的监听事件
+      openSocketOnEvent();
+      openResult()
+    } else {
+      closeSocketByKey(socketBackType.value);
+
+    }
   });
 }
 
@@ -295,12 +313,22 @@ const constructGameNN = (data) => {
 
   // ✅ 构建/更新用户下注数据
   const userBetList = numData.numList || [];
-
   infoWithType.forEach(item => {
-    let user = userBetList.find(u => u.user_id === item.user_id);
+    const isCash = item.is_cash === 1;
+    const isAnonymous = item.user_id === 0;
+
+    let user;
+
+    if (isAnonymous && isCash) {
+      // 匹配 user_id 为 0 且 is_cash == 1 的匿名现金下注
+      user = userBetList.find(u => u.user_id === 0 && u.is_cash === 1);
+    } else {
+      // 普通用户或匿名满注
+      user = userBetList.find(u => u.user_id === item.user_id && (!isCash || u.is_cash !== 1));
+    }
 
     if (user) {
-      const areaIndex = user.areaList.findIndex(a => a.area === area);
+      const areaIndex = user.areaList.findIndex(a => a.area === item.area);
 
       if (areaIndex > -1) {
         // 更新该区域下注
@@ -309,15 +337,58 @@ const constructGameNN = (data) => {
         // 新增该区域下注
         user.areaList.push(item);
       }
+
+      // 如果是匿名现金下注，只保留 is_cash == 1 的数据
+      if (isAnonymous && isCash) {
+        user.areaList = user.areaList.filter(a => a.is_cash === 1);
+      } else {
+        // 非现金下注：过滤掉 is_cash == 1 的项
+        user.areaList = user.areaList.filter(a => !a.is_cash);
+      }
+
     } else {
-      // 新增用户
-      userBetList.push({
+      // 不存在该用户，新增
+      const newUser = {
         user_id: item.user_id,
         ...item,
         areaList: [item]
-      });
+      };
+
+      // 标记匿名现金下注，便于之后区分
+      if (isAnonymous && isCash) {
+        newUser.is_cash = 1;
+      }
+
+      userBetList.push(newUser);
     }
   });
+  // infoWithType.forEach(item => {
+  //   let user = userBetList.find(u => u.user_id === item.user_id);
+
+  //   if (user) {
+
+  //     const areaIndex = user.areaList.findIndex(a => a.area === area);
+
+  //     if (areaIndex > -1) {
+  //       // 更新该区域下注
+  //       user.areaList.splice(areaIndex, 1, item);
+  //     } else {
+  //       // 新增该区域下注
+  //       user.areaList.push(item);
+  //     }
+
+  //     user.areaList = user.areaList.filter(a => !a.is_cash);
+  //   } else {
+  //     // 新增用户
+  //     userBetList.push({
+  //       user_id: item.user_id,
+  //       ...item,
+  //       areaList: [item]
+  //     });
+  //   }
+  // });
+
+
 
   // ✅ 如果 info 是空数组，说明该区域被清空了，移除所有用户的对应区域下注
   if (info.length === 0) {
@@ -338,7 +409,6 @@ const constructGameNN = (data) => {
     }
     return true
   })
-
 
   // ✅ 更新公共数据
   Object.assign(numData, {
@@ -420,22 +490,39 @@ const constructGameNN = (data) => {
   fullType.value = fullBetData.some(i => i.full_bet_type == 3) ? 3 : 0
   if (fullType.value == 3 && area === 'common') {
     fullList.value = groupBy(info, 'num');
+
     // 重新构造数据，将座位彩金相关添加到
     // 遍历fullList.value，将fullList.value中的每个对象的numList数组中的对象的area为seat_cash的对象的全部属性的值替换成fullList.value中对象的全部属性的值;
     const res = Object.keys(fullList.value).map(key => {
       const fullData = fullList.value[key];
       const caijinData = fullBetData.find(i => i.num === +key)?.numList?.filter(i => i.area === 'jackpot') || [];
+      const cashData = []
+      // 牛牛如果每个座位中的numList中有user_id 为0并且is_cash为 1，则为现金卡，添加到对应座位的fullData中
+      nnGameList.value.forEach((value, key2) => {
+        if (key2 === +key) {
+          const isCash = value.numList?.find(i => i.user_id === 0 && i.is_cash === 1);
+          if (isCash) {
+            cashData.push({
+              ...isCash,
+            });
+          }
+        }
+      })
+
       return {
         num: +key,
         fullData,
-        caijinData
+        caijinData,
+        cashData
       }
     })
     fullList.value = res
+    console.log('fullList.value', fullList.value);
 
   } else {
     // ✅ 过滤空数据
     list.value = fullBetData.filter(item => item.userCount !== 0);
+    console.log(list.value, 'list.value');
 
   }
 
@@ -508,6 +595,7 @@ onShow(() => {
 })
 
 const closeSocketByKey = (key) => {
+
   key && socketIO.off(key);
 }
 
