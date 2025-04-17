@@ -1,19 +1,13 @@
 <template>
-  <div
-    class="warning-flash-container"
-    :class="{ 'warning-active': isActive }"
-    :style="containerStyle"
-    role="alert"
-    aria-live="assertive"
-  >
+  <div class="warning-flash-container" :class="{ 'warning-active': isActive }" :style="containerStyle" role="alert"
+    aria-live="assertive">
     <div class="warning-overlay" :style="overlayStyle">
       <slot name="icon">
-        <image style="width: 80px" src="@/static/images/index/warning-icon.svg"></image>
+        <image style="width: 80px;height: 80px" src="@/static/images/index/warning-icon.svg"></image>
       </slot>
+      <slot name="content"></slot>
     </div>
-    <div class="warning-content">
-      <slot></slot>
-    </div>
+
   </div>
 </template>
 
@@ -122,7 +116,7 @@ const start = () => {
   if (isActive.value) return;
 
   isActive.value = true;
-//   playSound();
+  //   playSound();
   emit("started");
 
   if (props.duration > 0) {
@@ -183,6 +177,10 @@ defineExpose({
   overflow: hidden;
   transition: opacity 0.3s ease;
   z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
 }
 
 .warning-overlay {
@@ -196,6 +194,10 @@ defineExpose({
   justify-content: center;
   opacity: 0;
   transition: opacity 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  color: #fff;
+  font-size: 18px;
 }
 
 .warning-icon {
@@ -222,6 +224,7 @@ defineExpose({
   0% {
     opacity: 0.3;
   }
+
   100% {
     opacity: v-bind("overlayOpacity");
   }
@@ -232,10 +235,12 @@ defineExpose({
     transform: scale(1);
     opacity: 0.8;
   }
+
   50% {
     transform: scale(1.2);
     opacity: 1;
   }
+
   100% {
     transform: scale(1);
     opacity: 0.8;

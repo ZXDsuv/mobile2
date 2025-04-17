@@ -1,6 +1,5 @@
 <template>
   <LayoutCom>
-    <div style="color: #fff" @click="remot">一处</div>
     <view class="index-page-container">
       <view class="header-layout ignore-vh-header" id="header-layout">
         <text class="text-1 view-layout">{{ getTableInfo.label }}</text>
@@ -46,6 +45,7 @@ const { getTableInfo } = useGameeStore();
 
 // 桌台信息
 const tableDetail = reactive({});
+const tableLimit = ref([]); // 限红
 
 let nnGameList = ref(new Map());
 
@@ -104,7 +104,7 @@ const initData = async () => {
   const res = await getTableInfoApi({ table_id: getTableInfo.table_id });
   if (res.code !== 200) return;
   Object.assign(tableDetail, res.data);
-
+  tableLimit.value = tableDetail.table.limit; // 限红
   // 注册socket的监听事件
   openSocketOnEvent();
 }
@@ -160,8 +160,13 @@ const fenzuFn = (info, num) => {
           else mergedList.push(newUser); // 追加
         });
 
+        // 🔥 删除逻辑：只保留本次 value 中出现过的 user（按 user_id + area 判断）
+        const updatedList = mergedList.filter(oldUser =>
+          value.some(newUser => oldUser.user_id === newUser.user_id && oldUser.area === newUser.area)
+        );
+
         const uniqueUserIds = new Set(
-          mergedList
+          updatedList
             .filter(u => u.user_id > -1)
             .map(u => u.user_id)
         );
@@ -170,7 +175,7 @@ const fenzuFn = (info, num) => {
 
         resultMap.set(numKey, {
           ...existItem,
-          numList: mergedList,
+          numList: updatedList,
           userCount
         });
       }
@@ -189,9 +194,153 @@ const fenzuFn = (info, num) => {
   }
   // 4. 直接更新 list.value（保留所有 num）
   list.value = Array.from(resultMap.values());
-  console.log(list.value, "list.value");
 
+
+  // 计算限红
+  caculateLimitRed();
 };
+
+const caculateLimitRed = () => {
+  //  1.百家乐限红：（如果区域有现金卡，不计算最低限红）
+  // 1）庄闲两个位置：
+  // 最高：庄位置和闲位置中所有用户下注的单个币种的筹码总和相减的绝对值
+  // 最低：庄位置和闲位置中单个用户下注的单个币种的筹码总和不能低于的值
+  // 2）其他奖项
+  // 最高：区域内所有用户下注的单个币种的筹码总和不能超过的值
+  // 最低：区域内个人下注的单个币种的筹码总和不能低于的值
+
+
+  //先算庄闲的限红
+  list.value = list.value.map(item => {
+    const limit = sumAmountsByAreaAndCurrency(item.numList)
+    const hightLimitArr = caculateHighLimit(limit)
+    const isHight = hightLimitArr.some(item => item.isHight)
+    // 位置有没有cash
+    const hasCash = item.numList.some(cash => cash.is_cash == 1)
+    return {
+      ...item,
+      limit,
+      hightLimitArr,
+      isHight,
+      numList: item.numList.map(item => {
+        const lowLimit = tableLimit.value.find(
+          citem => citem.currency_id == item.currency_id
+        )?.limit_contents?.limit_low || 0;
+        return {
+          ...item,
+          isLow: hasCash ? false : +item.amount < +lowLimit
+        }
+      })
+    }
+  })
+
+  console.log(list.value, 'list.value');
+
+
+  // 公共区域的限红commonArea
+  commonArea.value = commonArea.value.map(item => {
+    const limit = sumAmountsByAreaAndCurrency2(item.numList, item.area)
+    const isHight = Object.keys(limit[item.area]).some(key => limit[item.area][key].isHight)
+    // 位置有没有cash
+    const hasCash = item.numList.some(cash => cash.is_cash == 1)
+    return {
+      ...item,
+      limit,
+      isHight,
+      numList: item.numList.map(item => {
+        const lowLimit = tableLimit.value.find(
+          citem => citem.currency_id == item.currency_id
+        )?.limit_contents[`limit_low_${item.area}`] || 0;
+        return {
+          ...item,
+          isLow: hasCash ? false : +item.amount < +lowLimit
+        }
+      })
+    }
+  })
+
+
+
+}
+
+
+
+function caculateHighLimit(limit) {
+  const { banker = {}, player = {} } = limit;
+  const allCurrencyIds = new Set([
+    ...Object.keys(banker),
+    ...Object.keys(player)
+  ]);
+
+  return Array.from(allCurrencyIds).map((key) => {
+    const bankerAmount = banker[key]?.amount || 0;
+    const playerAmount = player[key]?.amount || 0;
+
+    const highLimit = tableLimit.value.find(
+      item => item.currency_id == key
+    )?.limit_contents?.limit_high || 0;
+
+    const isHight = Math.abs(playerAmount - bankerAmount) > highLimit;
+
+    return {
+      currency_id: key,
+      isHight
+    };
+  });
+}
+
+function sumAmountsByAreaAndCurrency2(arr, are) {
+  let arr1 = arr?.reduce((acc, item) => {
+    const { area, currency_id, amount } = item;
+
+    if (!acc[area]) {
+      acc[area] = {};
+    }
+
+    if (!acc[area][currency_id]) {
+      acc[area][currency_id] = {
+        amount: 0
+      };
+    }
+
+    acc[area][currency_id]['amount'] += Number(amount) || 0;
+    return acc;
+  }, {});
+
+
+  Object.keys(arr1[are])?.forEach(key => {
+    const amount = arr1[are][key].amount;
+    const limit = tableLimit.value.find(item => item.currency_id == key)?.limit_contents[`limit_high_${are}`] || 0;
+    arr1[are][key].isHight = +amount > +limit;
+  })
+
+
+  return arr1;
+}
+
+function sumAmountsByAreaAndCurrency(arr) {
+  let arr1 = arr.reduce((acc, item) => {
+    const { area, currency_id, amount } = item;
+
+    if (!acc[area]) {
+      acc[area] = {};
+    }
+
+    if (!acc[area][currency_id]) {
+      acc[area][currency_id] = {
+        amount: 0
+      };
+    }
+
+    acc[area][currency_id]['amount'] += Number(amount) || 0;
+    return acc;
+  }, {});
+
+
+  // 计算每个
+
+  return arr1;
+}
 
 const constructCommonArea = (info) => {
   const keys = Object.keys(info)[0];
@@ -374,27 +523,27 @@ const openDoBet = () => {
       })
     }
 
-    if(getTableInfo.game_id === 3) {
+    if (getTableInfo.game_id === 3) {
       list.value = list.value.map(item => {
         return {
-         ...item,
+          ...item,
           numList: item.numList.map(user => {
             return {
-             ...user,
+              ...user,
               areaList: user.areaList.map(a => {
                 const includesBetId = bet_ids.includes(a.bet_id);
                 return {
-                 ...a,
-                  is_checkout: includesBetId? 1 : a.is_checkout, // 如果 bet_ids 包含 user.bet_id，则设置 is_win 为 1，否则为 0 
-                }  
-              }) 
-            }  
-          }) 
-        } 
+                  ...a,
+                  is_checkout: includesBetId ? 1 : a.is_checkout, // 如果 bet_ids 包含 user.bet_id，则设置 is_win 为 1，否则为 0 
+                }
+              })
+            }
+          })
+        }
       })
 
       console.log("你牛赔付", list.value);
-      
+
     }
   })
 }

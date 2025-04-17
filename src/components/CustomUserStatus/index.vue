@@ -27,7 +27,7 @@
                                             <view class="user-mes ignore-vh-user-mes color-header"
                                                 :class="{ 'caijin': num.area == 'jackpot', 'nn-pay': num.is_checkout }">
                                                 <span>{{ num.username
-                                                    }}</span>
+                                                }}</span>
                                                 <!-- 换庄图标 -->
                                                 <image v-if="isSwap(num.user_id, item)" class="changeBanker"
                                                     src="@/static/images/index/changeBanker.svg">
@@ -66,7 +66,7 @@
                                             <view class="user-mes ignore-vh-user-mes color-header"
                                                 :class="{ 'caijin': num.area == 'jackpot', 'nn-pay': num.is_checkout }">
                                                 <span class="full-bet">{{ '满注'
-                                                    }}</span>
+                                                }}</span>
                                                 <!-- 换庄图标 -->
                                                 <image v-if="isSwap(num.user_id, item)" class="changeBanker"
                                                     src="@/static/images/index/changeBanker.svg">
@@ -148,10 +148,18 @@
                                                 {{ `CASH` }}
                                             </view>
                                         </template>
-                                        <CustomWarning v-if="item.warning" :active="item.warning"></CustomWarning>
+
                                         <image v-if="num.is_checkout" class="checked-icon"
                                             src="@/static/images/index/right-icon.svg"></image>
+                                        <CustomWarning :active="num.isLow" v-if="num.isLow">
+                                            <template #content>
+                                                下注低于限红
+                                            </template>
+                                        </CustomWarning>
+
                                     </template>
+
+
                                     <!-- 牛牛 -->
                                     <template v-else>
                                         <template v-if="num.is_cash !== 1">
@@ -196,7 +204,9 @@
                                                 <!-- 整桌满注 -->
                                                 <template v-if="fullType == 3">
                                                     <view v-for="(number, nIndex) in 1" :key="number"
-                                                        class="nn-content-item" :class="[`text-color-${nIndex + 1}`, { 'nn-pay': number.is_checkout }]">{{
+                                                        class="nn-content-item"
+                                                        :class="[`text-color-${nIndex + 1}`, { 'nn-pay': number.is_checkout }]">
+                                                        {{
                                                             `整桌满注` }}
                                                         <image class="checked-icon" v-if="num.is_checkout"
                                                             src="@/static/images/index/right-icon.svg">
@@ -224,7 +234,11 @@
 
                                     </template>
                                 </view>
-
+                                <CustomWarning :active="item.isHight" v-if="item.isHight">
+                                    <template #content>
+                                        下注高于限红
+                                    </template>
+                                </CustomWarning>
                             </view>
                         </view>
                     </view>
@@ -245,10 +259,23 @@
                         <view class="content-content ignore-vh-24">{{ `${i.amount}(${i.count})` }}</view>
                         <image v-if="i.is_checkout" class="checked-icon" src="@/static/images/index/right-icon.svg">
                         </image>
+
+                        <CustomWarning :active="i.isLow" v-if="i.isLow">
+                            <template #content>
+                                下注低于限红
+                            </template>
+                        </CustomWarning>
+
                     </view>
                 </view>
-
+                <CustomWarning :active="item.isHight" v-if="item.isHight">
+                    <template #content>
+                        下注高于限红
+                    </template>
+                </CustomWarning>
             </view>
+
+
         </view>
     </view>
 
@@ -273,7 +300,7 @@ const gameId = computed(() => {
 })
 
 const showGiftArea = computed(() => {
-    return gameId === 1;
+    return gameId.value == 1;
 })
 // 定义 props
 const props = defineProps({
@@ -873,9 +900,10 @@ onMounted(() => {
     .user-gift-area {
         display: flex;
         gap: 16px;
+        position: relative;
 
         .gift-item {
-
+            position: relative;
             height: 188px;
             flex: 1;
             display: flex;
@@ -944,7 +972,7 @@ onMounted(() => {
                 background: #201903;
                 border-bottom-left-radius: 8px;
                 border-bottom-right-radius: 8px;
-
+                position: relative;
                 .content-header {
                     width: 100%;
                     background: #201802;
