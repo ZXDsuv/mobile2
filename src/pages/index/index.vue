@@ -13,7 +13,7 @@
       </view>
       <!-- 用户下注情况 -->
       <view class="scroll-area" id="scroll-area" :style="{ 'height': scrollHeight + 'px' }">
-        <CustomUserStatus :list1="list" :commonList="commonArea" :fullType="fullType" :fullList="fullList">
+        <CustomUserStatus :list1="list" :commonList="giftAll" :fullType="fullType" :fullList="fullList">
         </CustomUserStatus>
       </view>
     </view>
@@ -133,7 +133,9 @@ const fenzuFn = (info, num) => {
   });
 
   // 2. 合并 banker 数据（仅更新推送的 num）
-  function mergeDataToResultMap(data) {
+  function mergeDataToResultMap(data, area2) {
+
+
 
     Object.entries(data).forEach(([key, value]) => {
       const numKey = +num;
@@ -155,18 +157,21 @@ const fenzuFn = (info, num) => {
         const mergedList = [...existItem.numList];
         value.forEach(newUser => {
 
-          const idx = mergedList.findIndex(u => u.user_id === newUser.user_id && u.area === newUser.area);
+          const idx = mergedList.findIndex(u => u.user_id === newUser.user_id && u.area === newUser.area && u.username === newUser.username);
           if (idx !== -1) mergedList[idx] = newUser; // 更新
           else mergedList.push(newUser); // 追加
+
+
+          // 判断 mergedList 的数据在新数据中是否存在，如果不存在则删除
+          mergedList.forEach((item, index) => {
+            const exist = value.some(u => u.user_id === item.user_id && u.username === item.username && u.num === item.num);
+            if (!exist) mergedList.splice(index, 1);
+          })
         });
 
-        // 🔥 删除逻辑：只保留本次 value 中出现过的 user（按 user_id + area 判断）
-        const updatedList = mergedList.filter(oldUser =>
-          value.some(newUser => oldUser.user_id === newUser.user_id && oldUser.area === newUser.area)
-        );
 
         const uniqueUserIds = new Set(
-          updatedList
+          mergedList
             .filter(u => u.user_id > -1)
             .map(u => u.user_id)
         );
@@ -175,23 +180,46 @@ const fenzuFn = (info, num) => {
 
         resultMap.set(numKey, {
           ...existItem,
-          numList: updatedList,
+          numList: mergedList,
           userCount
         });
       }
     });
+
   }
+
 
   // 3. 更新推送的 banker 和 player 数据
-  mergeDataToResultMap(bankerData);
-  mergeDataToResultMap(playerData);
+  mergeDataToResultMap(bankerData, 'banker');
+  mergeDataToResultMap(playerData, 'player');
 
 
-  if (Object.keys(bankerData).length === 0 && Object.keys(playerData).length === 0) {
 
-    resultMap.delete(+num);
 
+  if (Object.keys(bankerData).length === 0) {
+    // 3.1 如果 banker 数据为空，更新 numList（保留所有 num）
+    resultMap.set(+num, {
+      ...resultMap.get(+num),
+      numList: resultMap.get(+num)?.numList?.filter(item => item.area !== 'banker') || []
+    })
   }
+
+  if (Object.keys(playerData).length === 0) {
+    // 3.1 如果 banker 数据为空，更新 numList（保留所有 num）
+    resultMap.set(+num, {
+      ...resultMap.get(+num),
+      numList: resultMap.get(+num)?.numList?.filter(item => item.area !== 'player') || []
+    })
+  }
+
+  // 检查resultMap的各个座位，如果座位的numList为空，则删除该整个座位
+  for (const [key, value] of resultMap.entries()) {
+    if (value.numList.length === 0) {
+      resultMap.delete(key);
+    }
+  }
+
+
   // 4. 直接更新 list.value（保留所有 num）
   list.value = Array.from(resultMap.values());
 
@@ -234,30 +262,29 @@ const caculateLimitRed = () => {
     }
   })
 
-  console.log(list.value, 'list.value');
 
 
   // 公共区域的限红commonArea
-  commonArea.value = commonArea.value.map(item => {
-    const limit = sumAmountsByAreaAndCurrency2(item.numList, item.area)
-    const isHight = Object.keys(limit[item.area]).some(key => limit[item.area][key].isHight)
-    // 位置有没有cash
-    const hasCash = item.numList.some(cash => cash.is_cash == 1)
-    return {
-      ...item,
-      limit,
-      isHight,
-      numList: item.numList.map(item => {
-        const lowLimit = tableLimit.value.find(
-          citem => citem.currency_id == item.currency_id
-        )?.limit_contents[`limit_low_${item.area}`] || 0;
-        return {
-          ...item,
-          isLow: hasCash ? false : +item.amount < +lowLimit
-        }
-      })
-    }
-  })
+  // commonArea.value = commonArea.value.map(item => {
+  //   const limit = sumAmountsByAreaAndCurrency2(item.numList, item.area)
+  //   const isHight = limit && Object.keys(limit[item.area]).some(key => limit[item.area][key].isHight)
+  //   // 位置有没有cash
+  //   const hasCash = item?.numList?.some(cash => cash.is_cash == 1)
+  //   return {
+  //     ...item,
+  //     limit,
+  //     isHight,
+  //     numList: item?.numList?.map(item => {
+  //       const lowLimit = tableLimit.value.find(
+  //         citem => citem.currency_id == item.currency_id
+  //       )?.limit_contents[`limit_low_${item.area}`] || 0;
+  //       return {
+  //         ...item,
+  //         isLow: hasCash ? false : +item.amount < +lowLimit
+  //       }
+  //     })
+  //   }
+  // })
 
 
 
@@ -308,13 +335,13 @@ function sumAmountsByAreaAndCurrency2(arr, are) {
   }, {});
 
 
-  Object.keys(arr1[are])?.forEach(key => {
-    const amount = arr1[are][key].amount;
-    const limit = tableLimit.value.find(item => item.currency_id == key)?.limit_contents[`limit_high_${are}`] || 0;
-    arr1[are][key].isHight = +amount > +limit;
-  })
-
-
+  if (arr1?.[are] && typeof arr1[are] === 'object') {
+    Object.keys(arr1[are]).forEach(key => {
+      const amount = arr1[are][key].amount;
+      const limit = tableLimit.value.find(item => item.currency_id == key)?.limit_contents?.[`limit_high_${are}`] || 0;
+      arr1[are][key].isHight = +amount > +limit;
+    });
+  }
   return arr1;
 }
 
@@ -341,16 +368,18 @@ function sumAmountsByAreaAndCurrency(arr) {
 
   return arr1;
 }
-
+const giftAll = ref([])
 const constructCommonArea = (info) => {
+  // 这个是奖项的key
   const keys = Object.keys(info)[0];
+  console.log(keys, info[keys]);
 
   commonArea.value = commonArea.value
     .filter(item => {
       // 如果 key 匹配并且 info[keys] 是空数组，就过滤掉（不保留）
-      if (item.key === keys && Array.isArray(info[keys]) && info[keys].length === 0) {
-        return false;
-      }
+      // if (item.key === keys && Array.isArray(info[keys]) && info[keys].length === 0) {
+      //   return false;
+      // }
       return true;
     })
     .map(item => {
@@ -362,7 +391,8 @@ const constructCommonArea = (info) => {
     });
 
 
-  commonArea.value = commonArea.value.filter(item => item.numList && item.numList.length > 0)
+  giftAll.value = commonArea.value.filter(item => item.numList && item.numList.length > 0)
+  console.log(commonArea.value);
 
 }
 
@@ -379,7 +409,7 @@ const gameIdOneEvent = (data) => {
       fenzuFn(info, num);
     } else {
       // 公共区域
-      constructCommonArea(info);
+      constructCommonArea(info, num);
     }
   } else if (getTableInfo.game_id === 3) {
     // 牛牛
@@ -408,7 +438,6 @@ const reConsctruct = (bet) => {
         ...item,
         numList: item.numList.map(user => {
           const betInfo = bet.find(b => b.user_id === user.user_id && b.area === user.area && b.num === user.num && b.is_cash === user.is_cash);
-          console.log(betInfo);
 
           return {
             ...user,
@@ -417,13 +446,11 @@ const reConsctruct = (bet) => {
         }),
       }
     })
-    console.log("重组成功", list.value);
 
   } else {
     // 牛牛
     list.value = list.value.map(item => {
       const betInfo = bet.find(be => be.num == item.num)
-      console.log("座位相关", betInfo, bet, item);
 
       // 存在相关座位下注信息
       if (betInfo) {
@@ -434,7 +461,6 @@ const reConsctruct = (bet) => {
               ...user,
               areaList: user.areaList.map(a => {
                 const betAreaInfo = bet.find(areaInfo => areaInfo.area == a.area && areaInfo.user_id == a.user_id && areaInfo.num == a.num && areaInfo.is_cash == a.is_cash);
-                console.log(betAreaInfo, 'is_checkout');
 
                 return {
                   ...a,
@@ -450,7 +476,6 @@ const reConsctruct = (bet) => {
       }
     })
 
-    console.log("牛牛重组成功", list.value);
 
   }
 }
@@ -464,10 +489,8 @@ const openResult = async () => {
     const { table_id } = data;
     // 根据table_id 获取桌台信息
     const res = await getTableInfoApi({ table_id });
-    console.log(res, '===============');
 
     if (res.code !== 200) return;
-    console.log(res, "table_INFO");
     const { bet } = res.data;
     // 重组事件
     reConsctruct(bet)
@@ -542,7 +565,6 @@ const openDoBet = () => {
         }
       })
 
-      console.log("你牛赔付", list.value);
 
     }
   })
@@ -763,7 +785,6 @@ const constructGameNN = (data) => {
   } else {
     // ✅ 过滤空数据
     list.value = fullBetData.filter(item => item.userCount !== 0);
-    console.log(list.value, 'list.value');
   }
 
 
@@ -820,7 +841,6 @@ onShow(() => {
 })
 
 const closeSocketByKey = (key, event) => {
-
   key && socketIO.off(key, event);
 }
 

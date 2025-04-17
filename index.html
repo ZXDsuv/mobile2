@@ -10,11 +10,16 @@
       '<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0' +
       (coverSupport ? ', viewport-fit=cover' : '') + '" />')
   </script>
-  <script type="module">
+  <script type="module" defer>
     // 动态生成文件路径
     const script = document.createElement('script');
     script.src = `${import.meta.env.BASE_URL}static/configPlugin.js?v=${Date.now()}`;
-    document.body.appendChild(script);
+    script.onload = () => {
+    // 配置加载完成后，初始化应用
+    window.__APP_READY__ = true;
+    document.dispatchEvent(new Event('config-ready'));
+  };
+  document.body.appendChild(script);
   </script>
   <title></title>
   <!--preload-links-->

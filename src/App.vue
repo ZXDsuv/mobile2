@@ -7,10 +7,16 @@ import { socketIO } from '@/socket/index.js';
 export default {
   onLaunch: function () {
     navigateTo('/pages/login/index')
+    console.log('App Launch')
 
     // 初始化socket
-    this.initSocket()
-    console.log('App Launch')
+    if (window?.__APP_READY__) {
+      this.initSocket();
+    } else {
+      document.addEventListener('config-ready', () => {
+        this.initSocket();
+      });
+    }
   },
   onShow: function () {
     console.log('App Show')
@@ -22,7 +28,7 @@ export default {
     initSocket: function () {
 
       socketIO.init({
-        url: window.PROXY_CONFIG.VUE_APP_SOCKET_URL,  // 使用相同的 URL 配置
+        url: window?.PROXY_CONFIG?.VUE_APP_SOCKET_URL,  // 使用相同的 URL 配置
         reconnection: true,  // 自动重连
         reconnectionDelay: 1000,  // 重连延迟时间
         reconnectionAttempts: Infinity,  // 重连次数
@@ -31,7 +37,7 @@ export default {
         // heartbeatMsg: '💓',  // 心跳消息内容
       });
 
-  
+
     }
   }
 }

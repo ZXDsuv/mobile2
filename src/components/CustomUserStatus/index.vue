@@ -134,10 +134,10 @@
                                     <template v-if="gameId == 1">
                                         <template v-if="!num.is_cash">
                                             <view class="user-mes ignore-vh-user-mes"
-                                                :class="{ 'color-header-1': num.area === 'banker', 'color-header-2': num.area === 'player', 'disable-user-box': num.is_checkout }">
+                                                :class="{ 'color-header-2': num.area === 'banker', 'color-header-1': num.area === 'player', 'disable-user-box': num.is_checkout }">
                                                 {{ num.full_bet ? '满注' : num.username }}</view>
                                             <view class="user-result"
-                                                :class="{ 'color-content-1': num.area === 'banker', 'color-cash-2': num.area === 'player', 'disable-user-box': num.is_checkout }">
+                                                :class="{ 'color-content-2': num.area === 'banker', 'color-cash-1': num.area === 'player', 'disable-user-box': num.is_checkout }">
                                                 {{ `${numberWithCommas(num.amount)}(${num.count})` }}
                                             </view>
                                         </template>
@@ -300,7 +300,7 @@ const gameId = computed(() => {
 })
 
 const showGiftArea = computed(() => {
-    return gameId.value == 1;
+    return gameId.value == 1 && props.commonList.length > 0;
 })
 // 定义 props
 const props = defineProps({
