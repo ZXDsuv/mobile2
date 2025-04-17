@@ -124,28 +124,28 @@
                             <view class="user-list-scroll" :style="getScrollStyle(item)" ref="scrollContent"
                                 :data-id="item.id">
 
-                                <view class="user-item ignore-vh-box"
+                                <view class="user-item ignore-vh-box "
                                     :class="{ 'nn-game': gameId == 3, 'bjl-game': gameId == 1 }"
                                     v-for="(num, numIndex) in numListGet(item.numList)" :key="numIndex">
                                     <!-- 百家乐龙虎 -->
                                     <template v-if="gameId == 1">
                                         <template v-if="!num.is_cash">
                                             <view class="user-mes ignore-vh-user-mes"
-                                                :class="{ 'color-header-1': num.area === 'banker', 'color-header-2': num.area === 'player' }">
+                                                :class="{ 'color-header-1': num.area === 'banker', 'color-header-2': num.area === 'player', 'disable-user-box': num.is_checkout }">
                                                 {{ num.full_bet ? '满注' : num.username }}</view>
                                             <view class="user-result"
-                                                :class="{ 'color-content-1': num.area === 'banker', 'color-cash-2': num.area === 'player' }">
+                                                :class="{ 'color-content-1': num.area === 'banker', 'color-cash-2': num.area === 'player', 'disable-user-box': num.is_checkout }">
                                                 {{ `${numberWithCommas(num.amount)}(${num.count})` }}
                                             </view>
                                         </template>
                                         <!-- 现金 -->
                                         <template v-else>
-                                            <view class="user-result color-cash-1">
+                                            <view class="user-result" :class="{'disable-user-box': num.is_checkout, 'color-cash-1': num.area === 'banker', 'color-cash-2': num.area === 'player'}">
                                                 {{ `CASH` }}
                                             </view>
                                         </template>
                                         <CustomWarning v-if="item.warning" :active="item.warning"></CustomWarning>
-                                        <image v-if="item.isChecked" class="checked-icon"
+                                        <image v-if="num.is_checkout" class="checked-icon"
                                             src="@/static/images/index/right-icon.svg"></image>
                                     </template>
                                     <!-- 牛牛 -->

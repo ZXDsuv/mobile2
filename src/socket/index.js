@@ -101,6 +101,8 @@ class SocketIOClient {
   emit(event, data) {
     if (this.socket?.connected) {
       this.socket.emit(event, data);
+      console.log("挂壁");
+      
     } else {
       console.warn('📭 Socket.io 未连接，无法发送：', event);
     }
@@ -114,8 +116,8 @@ class SocketIOClient {
     }
   }
 
-  off(event) {
-    const callback = this.events.get(event);
+  off(event, callBack) {
+    const callback = callBack || this.events.get(event);
     if (callback && this.socket) {
       console.log('📤 移除事件：', event);
       this.socket.off(event, callback);

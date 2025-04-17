@@ -1,5 +1,6 @@
 <template>
   <LayoutCom>
+    <div style="color: #fff" @click="remot">一处</div>
     <view class="index-page-container">
       <view class="header-layout ignore-vh-header" id="header-layout">
         <text class="text-1 view-layout">{{ getTableInfo.label }}</text>
@@ -81,7 +82,12 @@ const changeBindFn = () => {
     url: '/pages/login/index?type=2'
   });
 }
+const remot = () => {
+  socketIO.emit('read-wait-baccarat-stop', { table_id: getTableInfo.table_id, source: 'stream' });
 
+  closeSocketByKey(socketBackType.value, gameIdOneEvent)
+
+}
 const initData = async () => {
   // 加入房间
 
@@ -101,7 +107,6 @@ const initData = async () => {
 
   // 注册socket的监听事件
   openSocketOnEvent();
-  openResult()
 }
 
 // 通用的合并函数
@@ -155,9 +160,14 @@ const fenzuFn = (info, num) => {
           else mergedList.push(newUser); // 追加
         });
 
-        const uniqueUserIds = new Set(mergedList.map(u => u.user_id && u.user_id !== 0));
+        const uniqueUserIds = new Set(
+          mergedList
+            .filter(u => u.user_id > -1)
+            .map(u => u.user_id)
+        );
         const userCount = uniqueUserIds.size;
-
+        
+        
         resultMap.set(numKey, {
           ...existItem,
           numList: mergedList,
@@ -179,6 +189,7 @@ const fenzuFn = (info, num) => {
   }
   // 4. 直接更新 list.value（保留所有 num）
   list.value = Array.from(resultMap.values());
+  console.log(list.value, "list.value");
 
 };
 
@@ -207,45 +218,80 @@ const constructCommonArea = (info) => {
 }
 
 
+// 百家乐下注事件
+const gameIdOneEvent = (data) => {
+
+  const { info, num, table_id } = data;
+
+  if (getTableInfo.game_id === 1) {
+    // 庄闲按座位分组
+    // 非公共区域
+    if (+num > 0) {
+      fenzuFn(info, num);
+    } else {
+      // 公共区域
+      constructCommonArea(info);
+    }
+  } else if (getTableInfo.game_id === 3) {
+    // 牛牛
+    constructGameNN(data);
+  }
+
+}
+
 // 注册socket的监听事件
 const openSocketOnEvent = () => {
   // 监听用户下注
   if (!socketBackType.value) return;
 
   // 下注状态
-  socketIO.on(socketBackType.value, (data) => {
-    console.log('下注状态==》', data);
-
-    const { info, num, table_id } = data;
-
-    if (getTableInfo.game_id === 1) {
-      // 庄闲按座位分组
-      // 非公共区域
-      if (+num > 0) {
-        fenzuFn(info, num);
-      } else {
-        // 公共区域
-        constructCommonArea(info);
-      }
-    } else if (getTableInfo.game_id === 3) {
-      // 牛牛
-      constructGameNN(data);
-    }
-
-  });
-
-
-
-
+  socketIO.on(socketBackType.value, gameIdOneEvent);
+  openNext()
 
 
 }
 
-const openResult = () => {
+const reConsctruct = (bet) => {
+  if (getTableInfo.game_id === 1) {
+    // 百家乐
+    list.value = list.value.map(item => {
+      return {
+        ...item,
+        numList: item.numList.map(user => {
+          const betInfo = bet.find(b => b.user_id === user.user_id && b.area === user.area && b.num === user.num && b.is_cash === user.is_cash);
+          console.log(betInfo);
+
+          return {
+            ...user,
+            ...{ ...betInfo }, // 如果没有找到对应的下注信息，设置为0
+          };
+        }),
+      }
+    })
+    console.log("重组成功", list.value);
+
+  } else {
+    // 牛牛
+  }
+}
+
+const openResult = async () => {
   // 由下注状态进入赔付状态
-  socketIO.on('open-result', (data) => {
+  socketIO.on('open-result', async (data) => {
     closeSocketByKey(socketBackType.value);
+    socketIO.emit('read-wait-baccarat-stop', { table_id: getTableInfo.table_id, source: 'stream' });
     console.log('进入赔付状态==》open-result', data);
+    const { table_id } = data;
+    // 根据table_id 获取桌台信息
+    const res = await getTableInfoApi({ table_id });
+    console.log(res, '===============');
+
+    if (res.code !== 200) return;
+    console.log(res, "table_INFO");
+    const { bet } = res.data;
+    // 重组事件
+    reConsctruct(bet)
+    // 赔付结果
     openDoBet();
     openBack();
     // 下一局
@@ -254,16 +300,23 @@ const openResult = () => {
 }
 
 const openNext = () => {
+  // 牛牛
+  if (getTableInfo.game_id === 3) {
+    // 由下注状态进入赔付状态
+    openResult()
+  }
+
   // 由下注状态进入赔付状态
   socketIO.on('start-bet', (data) => {
     console.log('开始下注停止下注==》start-bet', data);
     const { status } = data;
-    if (status == 1) {
+    if (status == 2) {
       // 注册socket的监听事件
-      openSocketOnEvent();
+      closeSocketByKey(socketBackType.value, gameIdOneEvent);
       openResult()
+
     } else {
-      closeSocketByKey(socketBackType.value);
+      openSocketOnEvent();
 
     }
   });
@@ -273,7 +326,22 @@ const openDoBet = () => {
   // 在赔付状态中监听赔付结果
   socketIO.on('do-bet-success-back', (data) => {
     console.log('赔付结果==》do-bet-success-back', data);
-
+    const { bet_ids, table_id } = data;
+    if (getTableInfo.game_id === 1) {
+      // 百家乐
+      list.value = list.value.map(item => {
+        return {
+          ...item,
+          numList: item.numList.map(user => {
+            const includesBetId = bet_ids.includes(user.bet_id);
+            return {
+              ...user,
+              is_checkout: includesBetId ? 1 : 0, // 如果 bet_ids 包含 user.bet_id，则设置 is_win 为 1，否则为 0
+            };
+          })
+        }
+      })
+    }
   })
 }
 
@@ -594,9 +662,9 @@ onShow(() => {
   });
 })
 
-const closeSocketByKey = (key) => {
+const closeSocketByKey = (key, event) => {
 
-  key && socketIO.off(key);
+  key && socketIO.off(key, event);
 }
 
 
