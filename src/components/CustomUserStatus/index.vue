@@ -25,7 +25,7 @@
                                     <template v-if="gameId == 3">
                                         <template v-if="true">
                                             <view class="user-mes ignore-vh-user-mes color-header"
-                                                :class="{ 'caijin': num.area == 'jackpot' }">
+                                                :class="{ 'caijin': num.area == 'jackpot', 'nn-pay': num.is_checkout }">
                                                 <span>{{ num.username
                                                     }}</span>
                                                 <!-- 换庄图标 -->
@@ -39,12 +39,13 @@
                                             </view>
 
                                             <view class="user-result color-content"
-                                                :class="{ 'caijin-content': num.area === 'jackpot' }">
+                                                :class="{ 'caijin-content': num.area === 'jackpot', }">
                                                 <!-- 整桌满注 -->
                                                 <template v-if="fullType == 3">
                                                     <view v-for="(number, nIndex) in showNumberArea(num.areaList)"
                                                         :key="nIndex" class="nn-content-item"
-                                                        :class="getColorClass(number.area)">{{
+                                                        :class="[getColorClass(number.area), { 'nn-pay': number.is_checkout }]">
+                                                        {{
                                                             `${number.amount}(${number.count})` }}
                                                         <image v-if="number.is_checkout" class="checked-icon"
                                                             src="@/static/images/index/right-icon.svg">
@@ -63,7 +64,7 @@
                                     <template v-if="gameId == 3">
                                         <template v-if="true">
                                             <view class="user-mes ignore-vh-user-mes color-header"
-                                                :class="{ 'caijin': num.area == 'jackpot' }">
+                                                :class="{ 'caijin': num.area == 'jackpot', 'nn-pay': num.is_checkout }">
                                                 <span class="full-bet">{{ '满注'
                                                     }}</span>
                                                 <!-- 换庄图标 -->
@@ -80,9 +81,11 @@
                                                 <!-- 整桌满注 -->
                                                 <template v-if="fullType == 3">
                                                     <view v-for="(number, nIndex) in item.fullData" :key="number"
-                                                        class="nn-content-item" :class="[`text-color-${nIndex + 1}`]">{{
+                                                        class="nn-content-item"
+                                                        :class="[`text-color-${nIndex + 1}`, { 'nn-pay': number.is_checkout }]">
+                                                        {{
                                                             `${number.amount}(${number.count})` }}
-                                                        <image class="checked-icon" v-if="number.isChecked"
+                                                        <image class="checked-icon" v-if="number.is_checkout"
                                                             src="@/static/images/index/right-icon.svg">
                                                         </image>
                                                     </view>
@@ -140,7 +143,8 @@
                                         </template>
                                         <!-- 现金 -->
                                         <template v-else>
-                                            <view class="user-result" :class="{'disable-user-box': num.is_checkout, 'color-cash-1': num.area === 'banker', 'color-cash-2': num.area === 'player'}">
+                                            <view class="user-result"
+                                                :class="{ 'disable-user-box': num.is_checkout, 'color-cash-1': num.area === 'banker', 'color-cash-2': num.area === 'player' }">
                                                 {{ `CASH` }}
                                             </view>
                                         </template>
@@ -152,9 +156,10 @@
                                     <template v-else>
                                         <template v-if="num.is_cash !== 1">
                                             <view class="user-mes ignore-vh-user-mes color-header"
-                                                :class="{ 'caijin': num.area == 'jackpot' }">
+                                                :class="{ 'caijin': num.area == 'jackpot', 'nn-pay': num.is_checkout }">
                                                 <span v-if="showNomal(num.areaList)">{{ num.username }}</span>
-                                                <span class="full-bet" v-else-if="num.fullBetType === 1 && num.is_cash !== 1">{{ '满注'
+                                                <span class="full-bet"
+                                                    v-else-if="num.fullBetType === 1 && num.is_cash !== 1">{{ '满注'
                                                     }}</span>
                                                 <!-- 换庄图标 -->
                                                 <image v-if="isSwap(num.user_id, item)" class="changeBanker"
@@ -171,14 +176,16 @@
                                                     <!-- 未满注 -->
                                                     <view v-for="(number, nIndex) in showNumberArea(num.areaList)"
                                                         :key="nIndex" class="nn-content-item"
-                                                        :class="getColorClass(number.area)">{{
+                                                        :class="[getColorClass(number.area), { 'nn-pay': number.is_checkout }]">
+                                                        {{
                                                             `${number.amount}(${number.count})` }}
                                                         <image v-if="number.is_checkout" class="checked-icon"
                                                             src="@/static/images/index/right-icon.svg">
                                                         </image>
                                                     </view>
                                                     <!-- 单个区域满注 -->
-                                                    <view class="nn-content-item" :class="getColorClass(num.area)"
+                                                    <view class="nn-content-item"
+                                                        :class="[getColorClass(num.area), { 'nn-pay': num.is_checkout }]"
                                                         v-if="num.user_id == 0">{{
                                                             `${num.amount}(${num.count})` }}
                                                         <image v-if="num.is_checkout" class="checked-icon"
@@ -189,9 +196,9 @@
                                                 <!-- 整桌满注 -->
                                                 <template v-if="fullType == 3">
                                                     <view v-for="(number, nIndex) in 1" :key="number"
-                                                        class="nn-content-item" :class="[`text-color-${nIndex + 1}`]">{{
-                                                            `蒸煮oo` }}
-                                                        <image class="checked-icon"
+                                                        class="nn-content-item" :class="[`text-color-${nIndex + 1}`, { 'nn-pay': number.is_checkout }]">{{
+                                                            `整桌满注` }}
+                                                        <image class="checked-icon" v-if="num.is_checkout"
                                                             src="@/static/images/index/right-icon.svg">
                                                         </image>
                                                     </view>
@@ -232,11 +239,13 @@
                     {{ item.label }}
                 </view>
                 <view class="scroll-content" :style="getScrollStyle(item)" :data-id="item.id">
-                    <view class="item-content" v-for="i in item.numList" :key="i">
+                    <view class="item-content" :class="{ 'disable-user-box': i.is_checkout }" v-for="i in item.numList"
+                        :key="i">
                         <view class="content-header ignore-vh-24">{{ i.full_bet ? '满注' : i.username }}</view>
                         <view class="content-content ignore-vh-24">{{ `${i.amount}(${i.count})` }}</view>
+                        <image v-if="i.is_checkout" class="checked-icon" src="@/static/images/index/right-icon.svg">
+                        </image>
                     </view>
-
                 </view>
 
             </view>
@@ -308,7 +317,7 @@ const showNomal = (numList) => {
     return numList?.some(item => item.fullBetType === 0)
 }
 const numListGet = (numList) => {
-    
+
     if (gameId.value !== 3) return numList;
     // 如果item.areaList每一个都 == 0，那么
     if (props.fullType == 3) {
@@ -489,6 +498,7 @@ const isSwap = (user_id, item) => {
 }
 
 watch(() => props.list1, (newVal) => {
+    console.log(newVal);
 
     gameId == 1 ? smartUpdateList(list.value, newVal) : (list.value = newVal);
     calculateHeights()
@@ -837,6 +847,10 @@ onMounted(() => {
                 .disable-user-box {
                     color: #73716c !important;
                     background: transparent !important;
+                }
+
+                .nn-pay {
+                    opacity: 0.4 !important;
                 }
 
 

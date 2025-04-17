@@ -166,8 +166,8 @@ const fenzuFn = (info, num) => {
             .map(u => u.user_id)
         );
         const userCount = uniqueUserIds.size;
-        
-        
+
+
         resultMap.set(numKey, {
           ...existItem,
           numList: mergedList,
@@ -272,6 +272,37 @@ const reConsctruct = (bet) => {
 
   } else {
     // 牛牛
+    list.value = list.value.map(item => {
+      const betInfo = bet.find(be => be.num == item.num)
+      console.log("座位相关", betInfo, bet, item);
+
+      // 存在相关座位下注信息
+      if (betInfo) {
+        return {
+          ...item,
+          numList: item.numList.map(user => {
+            return {
+              ...user,
+              areaList: user.areaList.map(a => {
+                const betAreaInfo = bet.find(areaInfo => areaInfo.area == a.area && areaInfo.user_id == a.user_id && areaInfo.num == a.num && areaInfo.is_cash == a.is_cash);
+                console.log(betAreaInfo, 'is_checkout');
+
+                return {
+                  ...a,
+                  ...(betAreaInfo ? { ...betAreaInfo } : {}), // 如果没有找到对应的下注信息，设置为0
+                };
+              })
+            }
+          })
+        }
+      }
+      return {
+        ...item
+      }
+    })
+
+    console.log("牛牛重组成功", list.value);
+
   }
 }
 
@@ -342,6 +373,29 @@ const openDoBet = () => {
         }
       })
     }
+
+    if(getTableInfo.game_id === 3) {
+      list.value = list.value.map(item => {
+        return {
+         ...item,
+          numList: item.numList.map(user => {
+            return {
+             ...user,
+              areaList: user.areaList.map(a => {
+                const includesBetId = bet_ids.includes(a.bet_id);
+                return {
+                 ...a,
+                  is_checkout: includesBetId? 1 : a.is_checkout, // 如果 bet_ids 包含 user.bet_id，则设置 is_win 为 1，否则为 0 
+                }  
+              }) 
+            }  
+          }) 
+        } 
+      })
+
+      console.log("你牛赔付", list.value);
+      
+    }
   })
 }
 
@@ -372,9 +426,6 @@ const constructGameNN = (data) => {
     ...item,
     fullBetType: full_bet_type
   }));
-
-
-
 
   // ✅ 更新当前区域的下注信息
   numData[area] = [...infoWithType];
@@ -430,32 +481,6 @@ const constructGameNN = (data) => {
       userBetList.push(newUser);
     }
   });
-  // infoWithType.forEach(item => {
-  //   let user = userBetList.find(u => u.user_id === item.user_id);
-
-  //   if (user) {
-
-  //     const areaIndex = user.areaList.findIndex(a => a.area === area);
-
-  //     if (areaIndex > -1) {
-  //       // 更新该区域下注
-  //       user.areaList.splice(areaIndex, 1, item);
-  //     } else {
-  //       // 新增该区域下注
-  //       user.areaList.push(item);
-  //     }
-
-  //     user.areaList = user.areaList.filter(a => !a.is_cash);
-  //   } else {
-  //     // 新增用户
-  //     userBetList.push({
-  //       user_id: item.user_id,
-  //       ...item,
-  //       areaList: [item]
-  //     });
-  //   }
-  // });
-
 
 
   // ✅ 如果 info 是空数组，说明该区域被清空了，移除所有用户的对应区域下注
@@ -585,13 +610,11 @@ const constructGameNN = (data) => {
       }
     })
     fullList.value = res
-    console.log('fullList.value', fullList.value);
 
   } else {
     // ✅ 过滤空数据
     list.value = fullBetData.filter(item => item.userCount !== 0);
     console.log(list.value, 'list.value');
-
   }
 
 
@@ -614,21 +637,6 @@ const handleFullBetData = (gameArray, area, num) => {
 };
 
 
-const fullBetTypeFn = (numData) => {
-
-  let arr1 = JSON.parse(JSON.stringify(numData));
-  const arr = arr1?.equal?.concat(arr1?.double).concat(arr1?.super);
-  const hasFull = arr?.some(item => item?.fullBetType === 3); // 全场
-  if (hasFull) return 3; // 全场
-
-  const singleFull = arr?.some(item => item?.fullBetType === 1); // 单
-  if (singleFull) return 1; // 单
-
-  const doubleFull = arr?.every(item => item?.fullBetType === 0); // 无
-  if (doubleFull) return 0; // 无
-
-  return 0
-}
 
 
 onMounted(() => {
