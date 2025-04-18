@@ -267,22 +267,6 @@
                         </CustomWarning>
 
                     </view>
-                    <view class="item-content" :class="{ 'disable-user-box': i.is_checkout }" v-for="i in item.numList"
-                        :key="i.id">
-                        <view class="content-header ignore-vh-24">{{ i.full_bet ? '满注' : i.username }}</view>
-                        <view class="content-content ignore-vh-24">{{ `${i.amount}(${i.count})` }}</view>
-                        <image v-if="i.is_checkout" class="checked-icon" src="@/static/images/index/right-icon.svg">
-                        </image>
-
-                        <CustomWarning :active="i.isLow" v-if="i.isLow">
-                            <template #content>
-                                下注低于限红
-                            </template>
-                        </CustomWarning>
-
-                    </view>
-
-
 
                 </view>
                 <CustomWarning :active="item.isHight" v-if="item.isHight">
