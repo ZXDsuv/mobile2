@@ -534,6 +534,8 @@ watch(() => props.list1, (newVal) => {
 }, { immediate: true, deep: true })
 
 watch(() => props.commonList, (newVal) => {
+    console.log(newVal, '=-=--------');
+    
     giftList.value = newVal;
     calculateHeights2()
 
@@ -773,6 +775,7 @@ onMounted(() => {
                         top: 50%;
                         transform: translateY(-50%);
                     }
+
                 }
 
                 .ignore-vh-box {
@@ -1005,6 +1008,15 @@ onMounted(() => {
 
                 .ignore-vh-24 {
                     // height: 24px;
+                }
+
+                .checked-icon {
+                    width: 32px;
+                        height: 32px;
+                        position: absolute;
+                        right: 10px;
+                        top: 50%;
+                        transform: translateY(-50%);
                 }
             }
         }

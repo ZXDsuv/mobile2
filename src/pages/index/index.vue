@@ -156,26 +156,29 @@ const fenzuFn = (info, num) => {
         // 合并 numList（更新或追加 user）
         const mergedList = [...existItem.numList];
         value.forEach(newUser => {
+          console.log(newUser, 'newUser', mergedList);
 
-          const idx = mergedList.findIndex(u => u.user_id === newUser.user_id && u.area === newUser.area && u.username === newUser.username);
+          const idx = mergedList.findIndex(u => u.user_id == newUser.user_id && u.area == newUser.area && u.username == newUser.username && u.full_bet == newUser.full_bet && u.num == newUser.num && u.is_cash == newUser.is_cash);
           if (idx !== -1) mergedList[idx] = newUser; // 更新
           else mergedList.push(newUser); // 追加
 
 
+
           // 判断 mergedList 的数据在新数据中是否存在，如果不存在则删除
           mergedList.forEach((item, index) => {
-            const exist = value.some(u => u.user_id === item.user_id && u.username === item.username && u.num === item.num);
+            const exist = value.some(u => u.user_id === item.user_id && u.username === item.username && u.num === item.num && u.full_bet === item.full_bet && u.is_cash === item.is_cash && u.area === item.area);
             if (!exist) mergedList.splice(index, 1);
           })
         });
 
 
-        const uniqueUserIds = new Set(
-          mergedList
-            .filter(u => u.user_id > -1)
-            .map(u => u.user_id)
-        );
-        const userCount = uniqueUserIds.size;
+        const uniqueUserIds = mergedList
+          .filter(u => u.user_id > -1)
+          .map(u => u.user_id)
+
+          console.log(uniqueUserIds, 'uniqueUserIds');
+          
+        const userCount = uniqueUserIds.length;
 
 
         resultMap.set(numKey, {
@@ -222,7 +225,8 @@ const fenzuFn = (info, num) => {
 
   // 4. 直接更新 list.value（保留所有 num）
   list.value = Array.from(resultMap.values());
-
+  console.log(list.value, 'list.value');
+  
 
   // 计算限红
   caculateLimitRed();
@@ -358,8 +362,10 @@ function sumAmountsByAreaAndCurrency(arr) {
         amount: 0
       };
     }
+    if (acc[area][currency_id].user_id > 0) {
+      acc[area][currency_id]['amount'] += Number(amount) || 0;
 
-    acc[area][currency_id]['amount'] += Number(amount) || 0;
+    }
     return acc;
   }, {});
 
@@ -372,7 +378,6 @@ const giftAll = ref([])
 const constructCommonArea = (info) => {
   // 这个是奖项的key
   const keys = Object.keys(info)[0];
-  console.log(keys, info[keys]);
 
   commonArea.value = commonArea.value
     .filter(item => {
@@ -392,7 +397,6 @@ const constructCommonArea = (info) => {
 
 
   giftAll.value = commonArea.value.filter(item => item.numList && item.numList.length > 0)
-  console.log(commonArea.value);
 
 }
 
@@ -437,7 +441,7 @@ const reConsctruct = (bet) => {
       return {
         ...item,
         numList: item.numList.map(user => {
-          const betInfo = bet.find(b => b.user_id === user.user_id && b.area === user.area && b.num === user.num && b.is_cash === user.is_cash);
+          const betInfo = bet.find(b => b.user_id === user.user_id && b.username === user.username && b.area === user.area && b.num === user.num && b.is_cash === user.is_cash && b.full_bet === user.full_bet);
 
           return {
             ...user,
@@ -446,6 +450,22 @@ const reConsctruct = (bet) => {
         }),
       }
     })
+
+    commonArea.value = commonArea.value.map(item => {
+      return {
+       ...item,
+        numList: item?.numList ? item?.numList?.map(user => {
+          const betInfo = bet.find(b => b.user_id === user.user_id && b.username === user.username && b.area === user.area && b.num == user.num && b.is_cash == user.is_cash && b.full_bet == user.full_bet);  
+          return {
+          ...user,
+          ...{...betInfo }, // 如果没有找到对应的下注信息，设置为0 
+          }
+        }) : []
+      } 
+    })
+
+    console.log("重组百家乐", list.value, commonArea.value);
+    
 
   } else {
     // 牛牛
@@ -528,7 +548,7 @@ const openNext = () => {
 const openDoBet = () => {
   // 在赔付状态中监听赔付结果
   socketIO.on('do-bet-success-back', (data) => {
-    console.log('赔付结果==》do-bet-success-back', data);
+    console.log('赔付结果==》do-bet-success-back', data, commonArea.value);
     const { bet_ids, table_id } = data;
     if (getTableInfo.game_id === 1) {
       // 百家乐
@@ -539,11 +559,30 @@ const openDoBet = () => {
             const includesBetId = bet_ids.includes(user.bet_id);
             return {
               ...user,
-              is_checkout: includesBetId ? 1 : 0, // 如果 bet_ids 包含 user.bet_id，则设置 is_win 为 1，否则为 0
+              is_checkout: includesBetId ? 1 : user.is_checkout, // 如果 bet_ids 包含 user.bet_id，则设置 is_win 为 1，否则为 0
             };
           })
         }
       })
+
+      commonArea.value = commonArea.value.map(item => {
+        return {
+        ...item,
+          numList: item?.numList?.map(user => {
+            const includesBetId = bet_ids.includes(user.bet_id);
+            return {
+             ...user,
+              is_checkout: includesBetId? 1 : user.is_checkout, // 如果 bet_ids 包含 user.bet_id，则设置 is_win 为 1，否则为 0
+            };
+          }) 
+        } 
+      })
+
+      
+      giftAll.value = commonArea.value.filter(item => item.numList && item.numList.length > 0)
+
+      console.log("百家乐赔付", list.value, commonArea.value, bet_ids);
+      
     }
 
     if (getTableInfo.game_id === 3) {
