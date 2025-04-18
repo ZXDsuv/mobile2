@@ -159,7 +159,7 @@ const fenzuFn = (info, num) => {
 
           const idx = mergedList.findIndex(u => u.user_id == newUser.user_id && u.area == newUser.area && u.username == newUser.username && u.full_bet == newUser.full_bet && u.num == newUser.num && u.is_cash == newUser.is_cash);
           if (idx !== -1) mergedList[idx] = newUser; // 更新
-          else mergedList.push(newUser); // 追加
+          else mergedList.push({...newUser, id: generateId()}); // 追加
 
 
 
@@ -387,14 +387,20 @@ const constructCommonArea = (info) => {
     .map(item => {
       const newItem = { ...item };
       if (item.key === keys) {
-        newItem.numList = info[keys];
+        
+    // 给numList里的每一个对象加上一个唯一的id
+        newItem.numList = info[keys].map((user, i) => ({ ...user, id: generateId() }));
       }
       return newItem;
     });
 
-
+   
   giftAll.value = commonArea.value.filter(item => item.numList && item.numList.length > 0)
 
+}
+
+function generateId() {
+  return crypto.randomUUID(); // 现代浏览器支持
 }
 
 
@@ -548,10 +554,6 @@ const openNext = () => {
     }
   });
 }
-watch(() => list.value, (newVal) => {
-  console.log('list.value', newVal);
-
-})
 const openDoBet = () => {
   // 在赔付状态中监听赔付结果
   socketIO.on('do-bet-success-back', (data) => {
@@ -1050,7 +1052,6 @@ const constructGameNN = (data) => {
 
 
   }
-  console.log(list.value, "list.value", nnGameList.value);
 
 
 

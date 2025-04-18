@@ -27,7 +27,7 @@
                                             <view class="user-mes ignore-vh-user-mes color-header"
                                                 :class="{ 'caijin': num.area == 'jackpot', 'nn-pay': num.is_checkout }">
                                                 <span>{{ num.username
-                                                }}</span>
+                                                    }}</span>
                                                 <!-- 换庄图标 -->
                                                 <image v-if="isSwap(num.user_id, item)" class="changeBanker"
                                                     src="@/static/images/index/changeBanker.svg">
@@ -66,7 +66,7 @@
                                             <view class="user-mes ignore-vh-user-mes color-header"
                                                 :class="{ 'caijin': num.area == 'jackpot', 'nn-pay': num.is_checkout }">
                                                 <span class="full-bet">{{ '满注'
-                                                }}</span>
+                                                    }}</span>
                                                 <!-- 换庄图标 -->
                                                 <image v-if="isSwap(num.user_id, item)" class="changeBanker"
                                                     src="@/static/images/index/changeBanker.svg">
@@ -182,7 +182,7 @@
                                                 :class="{ 'caijin-content': num.area == 'jackpot' }">
                                                 <template v-if="fullType == 0">
                                                     <!-- 未满注 -->
-                                                    <view  v-for="(number, nIndex) in showNumberArea(num.areaList)"
+                                                    <view v-for="(number, nIndex) in showNumberArea(num.areaList)"
                                                         :key="nIndex" class="nn-content-item"
                                                         :class="[getColorClass(number.area), { 'nn-pay': number.is_checkout }]">
                                                         {{
@@ -254,7 +254,7 @@
                 </view>
                 <view class="scroll-content" :style="getScrollStyle(item)" :data-id="item.id">
                     <view class="item-content" :class="{ 'disable-user-box': i.is_checkout }" v-for="i in item.numList"
-                        :key="i">
+                        :key="i.id">
                         <view class="content-header ignore-vh-24">{{ i.full_bet ? '满注' : i.username }}</view>
                         <view class="content-content ignore-vh-24">{{ `${i.amount}(${i.count})` }}</view>
                         <image v-if="i.is_checkout" class="checked-icon" src="@/static/images/index/right-icon.svg">
@@ -267,6 +267,23 @@
                         </CustomWarning>
 
                     </view>
+                    <view class="item-content" :class="{ 'disable-user-box': i.is_checkout }" v-for="i in item.numList"
+                        :key="i.id">
+                        <view class="content-header ignore-vh-24">{{ i.full_bet ? '满注' : i.username }}</view>
+                        <view class="content-content ignore-vh-24">{{ `${i.amount}(${i.count})` }}</view>
+                        <image v-if="i.is_checkout" class="checked-icon" src="@/static/images/index/right-icon.svg">
+                        </image>
+
+                        <CustomWarning :active="i.isLow" v-if="i.isLow">
+                            <template #content>
+                                下注低于限红
+                            </template>
+                        </CustomWarning>
+
+                    </view>
+
+
+
                 </view>
                 <CustomWarning :active="item.isHight" v-if="item.isHight">
                     <template #content>
@@ -468,6 +485,7 @@ const calculateHeights2 = async () => {
     query.exec(res => {
         const container = res[0];
         const content = res[1];
+        console.log(res[0], res[1]);
 
         // 座位容器在高度
         container.forEach((item, index) => {
@@ -527,28 +545,28 @@ const isSwap = (user_id, item) => {
 // 节流更新函数
 let updateTimer = null;
 watch(() => props.list1, (newVal) => {
-    console.log('list1', newVal);
-    if (gameId.value == 1) {
+    if (updateTimer) return;
+    updateTimer = setTimeout(() => {
         smartUpdateList(list.value, newVal)
-    } else {
-        if (updateTimer) return;
-        updateTimer = setTimeout(() => {
-            list.value = [...newVal]; // 拷贝赋值，避免引用问题
-            updateTimer = null;
-        }, 100); // 每 100ms 最多更新一次
-    }
+        updateTimer = null;
+        calculateHeights()
+    }, 1000); // 每 100ms 最多更新一次
 
-    // gameId.value == 1 ? smartUpdateList(list.value, newVal) : (list.value = newVal);
-    calculateHeights()
-    calculateHeights2()
 
 }, { deep: true })
-
+let updateCommonTimer = null;
 watch(() => props.commonList, (newVal) => {
-    giftList.value = newVal;
-    calculateHeights2()
 
-}, { immediate: true, deep: true })
+    if (updateCommonTimer) return;
+    updateCommonTimer = setTimeout(() => {
+        console.log(newVal);
+
+        smartUpdateList(giftList.value, newVal)
+        updateCommonTimer = null;
+
+        calculateHeights2()
+    }, 1000); // 每 100ms 最多更新一次
+}, { deep: true })
 // 生命周期
 onMounted(() => {
     // list.value = [
