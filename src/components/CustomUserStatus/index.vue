@@ -182,7 +182,7 @@
                                                 :class="{ 'caijin-content': num.area == 'jackpot' }">
                                                 <template v-if="fullType == 0">
                                                     <!-- 未满注 -->
-                                                    <view v-for="(number, nIndex) in showNumberArea(num.areaList)"
+                                                    <view  v-for="(number, nIndex) in showNumberArea(num.areaList)"
                                                         :key="nIndex" class="nn-content-item"
                                                         :class="[getColorClass(number.area), { 'nn-pay': number.is_checkout }]">
                                                         {{
@@ -194,7 +194,7 @@
                                                     <!-- 单个区域满注 -->
                                                     <view class="nn-content-item"
                                                         :class="[getColorClass(num.area), { 'nn-pay': num.is_checkout }]"
-                                                        v-if="num.user_id == 0">{{
+                                                        v-if="num.user_id == 0 && num.full_bet">{{
                                                             `${num.amount}(${num.count})` }}
                                                         <image v-if="num.is_checkout" class="checked-icon"
                                                             src="@/static/images/index/right-icon.svg">
@@ -356,7 +356,7 @@ const numListGet = (numList) => {
     }
     return numList.filter(item => item.user_id == 0 || !item.areaList.every(area => area.fullBetType > 0))
 }
-let list = ref(props.list1)
+let list = ref([])
 const listContainer = ref(null)
 const scrollContent = ref(null)
 // id: 唯一标识 座位标识
@@ -379,7 +379,8 @@ const getScrollStyle = (item) => ({
 
 
 const showNumberArea = (list) => {
-    return list.filter((item) => !item.hiddenByFullBet)
+    // 这里要展示未瞒住的数据
+    return list.filter((item) => item.fullBetType == 0)
 }
 
 // const calculateHeights = async () => {
@@ -523,19 +524,27 @@ const isSwap = (user_id, item) => {
     const swap = eR || dR || sR;
     return swap
 }
-
+// 节流更新函数
+let updateTimer = null;
 watch(() => props.list1, (newVal) => {
-    console.log(newVal);
+    console.log('list1', newVal);
+    if (gameId.value == 1) {
+        smartUpdateList(list.value, newVal)
+    } else {
+        if (updateTimer) return;
+        updateTimer = setTimeout(() => {
+            list.value = [...newVal]; // 拷贝赋值，避免引用问题
+            updateTimer = null;
+        }, 100); // 每 100ms 最多更新一次
+    }
 
-    gameId == 1 ? smartUpdateList(list.value, newVal) : (list.value = newVal);
+    // gameId.value == 1 ? smartUpdateList(list.value, newVal) : (list.value = newVal);
     calculateHeights()
     calculateHeights2()
 
-}, { immediate: true, deep: true })
+}, { deep: true })
 
 watch(() => props.commonList, (newVal) => {
-    console.log(newVal, '=-=--------');
-    
     giftList.value = newVal;
     calculateHeights2()
 
@@ -976,6 +985,7 @@ onMounted(() => {
                 border-bottom-left-radius: 8px;
                 border-bottom-right-radius: 8px;
                 position: relative;
+
                 .content-header {
                     width: 100%;
                     background: #201802;
@@ -1012,11 +1022,11 @@ onMounted(() => {
 
                 .checked-icon {
                     width: 32px;
-                        height: 32px;
-                        position: absolute;
-                        right: 10px;
-                        top: 50%;
-                        transform: translateY(-50%);
+                    height: 32px;
+                    position: absolute;
+                    right: 10px;
+                    top: 50%;
+                    transform: translateY(-50%);
                 }
             }
         }
