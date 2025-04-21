@@ -36,7 +36,7 @@ import { socketIO } from '@/socket/index.js';
 // COMMON
 import COMMON_DATA from "@/utils/common";
 
-import { groupBy } from "@/utils/tool"
+import { groupBy, arraysEqualIgnoreOrder } from "@/utils/tool"
 
 //store
 import { useGameeStore } from "@/store"
@@ -275,6 +275,8 @@ const caculateLimitRed = () => {
 
 }
 
+
+
 // 公共区域的限红
 function caculateHighLimit2(limit = {}, area = '') {
   if (Object.keys(limit).length === 0) return [];
@@ -352,6 +354,30 @@ function sumAmountsByAreaAndCurrency2(arr, are) {
       arr1[are][key].isHight = +amount > +limit;
     });
   }
+  return arr1;
+}
+
+function sumAmountsByAreaAndCurrencyByNN(arr) {
+  let arr1 = arr.reduce((acc, item) => {
+    const { area, currency_id, amount, user_id } = item;
+
+    if (!acc[area]) {
+      acc[area] = {};
+    }
+
+    if (!acc[area][currency_id]) {
+      acc[area][currency_id] = {
+        amount: 0
+      };
+    }
+
+    if (user_id > 0) {
+      acc[area][currency_id]['amount'] += Number(amount) || 0;
+
+    }
+    return acc;
+  }, {});
+
   return arr1;
 }
 
@@ -677,108 +703,169 @@ const constructGameNN = (data) => {
   const { info = [], num, table_id, area, swap, full_bet_type } = data;
   // 如果area == common的清空，判断full_bet_type是不是等于3，如果等于3，则把所有数据的fullBetType设置为3
 
-
+  // 座位号 
   const numKey = +num;
+  // 已经存储的座位号相关的信息
   const numData = nnGameList.value.get(numKey) || {};
 
-  // 添加 fullBetType 到每条 info 数据
+  // info: 当前座位号当前区域的所有用户的下注信息
   const infoWithType = info.map(item => ({
     ...item,
     fullBetType: full_bet_type
   }));
 
   // ✅ 更新当前区域的下注信息
+  // 当前座位号指定区域的下注信息
   numData[area] = [...infoWithType];
-
+  const isSameBet = (a, b) =>
+    a.area === b.area &&
+    a.num === b.num &&
+    a.user_id === b.user_id &&
+    a.is_cash === b.is_cash &&
+    a.full_bet === b.full_bet;
   // ✅ 构建/更新用户下注数据
+  // userBetList: 当前座位的所有用户在所有区域的下注信息
   const userBetList = numData.numList || [];
   infoWithType.forEach(item => {
+
+    const { tags } = item;
+    // 判断是否是现金下注
     const isCash = item.is_cash === 1;
+
+    // user_id == 0：有可能是现金码，有可能是满注卡
+    // is_cash == 1 && full_bet == 0：现金码
+    // is_cash == 0 && full_bet == 1：满注卡
     const isAnonymous = item.user_id === 0;
 
+    // 满注卡 
+    const isFullBet = item.full_bet === 1;
     let user;
 
+    // 同一个区域可以下多个现金卡 ， 所以不判断区域
     if (isAnonymous && isCash) {
-      // 匹配 user_id 为 0 且 is_cash == 1 的匿名现金下注
-      user = userBetList.find(u => u.user_id == 0 && u.is_cash == 1);
+      // 匹配 user_id 为 0 且 is_cash == 1 的匿名现金下注, 且筹码uid相同，因为所有的现金码的user_id和is_cash都一样
+      user = userBetList?.find(u => u?.user_id == 0 && u?.is_cash == 1 && arraysEqualIgnoreOrder(u.tags, tags));
+    } else if (!isCash && isFullBet) {
+      // 匹配 user_id 为 0 且 is_cash == 0 的满注卡
+      user = userBetList.find(u => u.user_id == 0 && u.is_cash == 0 && u.full_bet && arraysEqualIgnoreOrder(u.tags, tags));
     } else {
-      // 普通用户或匿名满注
-      user = userBetList.find(u => u.user_id == item.user_id && (!isCash || u.is_cash !== 1));
+      // 普通用户， 判断用户id和tag数组即可，多加条件，区域和座位号
+      // 普通用户不能从userBetList里找, 因为numList里的每一条，除去上面的几种情况，一条就是用户的所有下注情况，具体是在里面的areaList里
+      // 所有只需要判断用户id存不存在之后，再从里面的areaLisst里去比较
+      // 普通用户：user_id > 0 && is_cash == 0 && full_bet == 0 && area == item.area && num == item.num
+      // 普通用户（非匿名）：直接找 u 和目标 item 对应的 area 是否存在
+      // 如果area是jackpot就要分区域
+      user = userBetList.find(u => u?.user_id === item?.user_id && (item.area == 'jackpot' ? u.area === item.area : u.area !== 'jackpot'));
+
+
+
     }
 
+    // 定义是否是完全相同的一条下注（目标是用于 areaList 的去重或更新）
+
+
+    // 这里是如果旧数据中已经存在了该下注信息，就更新，否则就新增
     if (user) {
-      const areaIndex = user.areaList.findIndex(a => a.area == item.area);
-      const areaItem = user.areaList.find(a => a.area == item.area);
-
-
-      if (areaIndex > -1) {
-        // 更新该区域下注
-        user.areaList.splice(areaIndex, 1, { ...areaItem, ...item });
+      const existingIndex = user?.areaList?.findIndex(a => isSameBet(a, item));
+      if (existingIndex > -1) {
+        // 更新原下注
+        user.areaList.splice(existingIndex, 1, { ...user.areaList[existingIndex], ...item });
       } else {
-        // 新增该区域下注
+        // 新增下注记录
         user.areaList.push(item);
       }
 
-      // 如果是匿名现金下注，只保留 is_cash == 1 的数据
-      if (isAnonymous && isCash) {
-        user.areaList = user.areaList.filter(a => a.is_cash === 1);
-      } else {
-        // 非现金下注：过滤掉 is_cash == 1 的项
-        user.areaList = user.areaList.filter(a => !a.is_cash);
+
+      const index2 = userBetList.findIndex(u =>
+        u?.user_id === item?.user_id &&
+        (item.area === 'jackpot' ? u.area === 'jackpot' : true)
+      );
+
+      if (index2 > -1) {
+        userBetList.splice(index2, 1, user);
+      } else if (item.area === 'jackpot') {
+        // 同一个 user_id 已存在非 jackpot，新增一条 jackpot 数据
+        userBetList.push({
+          ...item,
+          area: 'jackpot',
+          areaList: [item]
+        });
       }
+
 
     } else {
       // 不存在该用户，新增
       const newUser = {
         user_id: item.user_id,
+        is_cash: item.is_cash,
+        full_bet: item.full_bet,
+        tags: item.tags,
+        num: item.num, // 记录当前这个座位号
         ...item,
+        area: item.area,
         areaList: [item]
       };
-
-      // 标记匿名现金下注，便于之后区分
-      if (isAnonymous && isCash) {
-        newUser.is_cash = 1;
-      }
-
       userBetList.push(newUser);
+
+    }
+
+
+
+  });
+  userBetList.forEach((user, userIndex) => {
+    // 新下注中当前用户在该区域的所有下注
+    const newAreaItems = infoWithType.filter(i => i.user_id === user.user_id && i.area === area);
+
+    // 当前用户下注中该区域的所有老数据索引
+    user.areaList = user.areaList.filter(oldItem => {
+      // 如果是当前区域才判断是否删除
+      if (oldItem.area === area) {
+        // 如果旧下注在新数据中不存在，就删掉
+        return newAreaItems.some(newItem => isSameBet(oldItem, newItem));
+      }
+      // 非当前区域的保留
+      return true;
+    });
+
+    // 如果 areaList 被清空，可以删掉整个 user
+    if (user.areaList.length === 0) {
+      userBetList.splice(userIndex, 1);
     }
   });
 
-
-  // ✅ 如果 info 是空数组，说明该区域被清空了，移除所有用户的对应区域下注
+  // ✅ 如果 info 是空数组，说明该座位该区域被清空了，移除所有用户的对应区域下注
   if (info.length === 0) {
     userBetList.forEach(user => {
-      if (user.areaList) {
-        user.areaList = user.areaList.filter(a => a.area !== area);
+      if (user?.areaList) {
+        user.areaList = user?.areaList?.filter(a => a.area !== area);
       }
     });
   }
 
+
   // 将userBetList里的旧数据，在info中不存在的删掉
   //userBetList: 当前座位的所有用户在所有区域的下注信息
   // info是当前区域当前座位的用户下注信息，是最新的
+  // 其实上面已经处理过了，这里又处理了一遍
   const userBetListFilter = userBetList.filter(user => {
-    const isEqualNum = user.num === num;
-    const isEqualArea = user.area === area;
-    if (isEqualNum && isEqualArea) {
-      return user.areaList.some(a => {
-        return info.some(i => i.user_id == a.user_id && i.area === a.area && i.num === a.num && i.is_cash == a.is_cash);
-      })
-    }
+    // const isEqualNum = user.num === num;
+    // const isEqualArea = user.area === area;
+    // if (isEqualNum && isEqualArea) {
+    //   return user.areaList.some(a => {
+    //     return info.some(i => i.user_id == a.user_id && i.area === a.area && i.num === a.num && i.is_cash == a.is_cash && i.full_bet == a.full_bet && arraysEqualIgnoreOrder(a.tags, i.tags));
+    //   })
+    // }
     return true;
-
-
   })
-  console.log(userBetList, info, num, area);
 
   const tList = userBetListFilter.filter(item => {
-    if (item.user_id === 0) {
-      const isNo = numData[item.area]?.some(i => i.user_id === 0 && i.is_cash === 1 && i.area === item.area)
-      if (isNo) {
-        return true
-      }
-      return false
-    }
+    // if (item.user_id === 0) {
+    //   const isNo = numData[item.area]?.some(i => i.user_id === 0 && i.is_cash === 1 && i.area === item.area)
+    //   if (isNo) {
+    //     return true
+    //   }
+    //   return false
+    // }
     return true
   })
 
@@ -792,6 +879,8 @@ const constructGameNN = (data) => {
     userCount: tList.length
   });
 
+
+
   // ✅ 设置更新回 map
   nnGameList.value.set(numKey, numData);
   // 如果value的jackpot属性是空数组或者没有，需要将value里的numList数组中的area为jackpot的对象删掉
@@ -801,58 +890,81 @@ const constructGameNN = (data) => {
   // 如果没有area == jackpot但是有user_id跟value中的jackpot中的对象的user_id有相同的，则需要在numList中新增一个对象，对象的属性值为原numList数组中对象的user_id与jackpot中对象的user_id相同
   // 的全部属性，并且area设置为jackpot，然后更新该areaList，将value中的jackpot属性的对象添加到numList中新增的对象中的areaList中;
   // 如果没有area == jackpot且没有user_id跟value中的jackpot中的对象的user_id有相同的，则需要在numList中新增一个对象，对象的属性值为原numList数组中对象的user_id与jackpot中对象的user_id相同的全部属性，并且area设置为jackpot，然后更新该areaList，将value中的jackpot属性的对象添加到numList中新增的对象中的areaList中;
-  nnGameList.value.forEach((value, key) => {
-    if (value.jackpot) {
-      if (value.jackpot.length === 0) {
-        // 移除 numList 中 area 为 jackpot 的对象
-        value.numList = value.numList.filter(item => item.area !== 'jackpot');
 
-      } else {
-        value.jackpot.forEach(item => {
-          // 查找是否已有相同 user_id 的用户
-          const user = value.numList.find(u => u.user_id === item.user_id && u.area === 'jackpot');
-          if (user) {
-            const numListAreaIndex = value.numList.findIndex(a => a.area === 'jackpot' && a.user_id === item.user_id);
-            if (numListAreaIndex > -1) {
-              const areaIndex = user.areaList?.findIndex(a => a.area === 'jackpot' && a.user_id === item.user_id);
+  // nnGameList.value.forEach((value, key) => {
+  //   if (!value.jackpot) return;
+  //     if (value.jackpot.length === 0) {
+  //       // 移除 numList 中 area 为 jackpot 的对象
+  //       value.numList = value.numList.filter(item => item.area !== 'jackpot');
 
-              user.areaList.splice(areaIndex, 1, item);
-            } else {
-              user.areaList.push({
-                ...item,
-                area: 'jackpot',
-                areaList: [item]
-              }); // 新增一个带 jackpot 属性的对象到 areaList 中
-            }
+  //     } else {
 
-          } else {
-            // 没有找到用户，则直接新增
-            value.numList.push({
-              ...item,
-              area: 'jackpot',
-              areaList: [item]
-            });
-          }
-        });
-        // 删除numList中每个对象中的areaList中的对象，numList中每个对象中的areaList中的对象的area与numList对象的area不一致，则删除该对象
-        value.numList.forEach(item => {
-          item.areaList = item.areaList.filter(a => a.area === item.area);
-        });
+  //       value.jackpot.forEach(item => {
+  //         // 查找是否已有相同 user_idb并且是彩金区域的 的用户,
+  //         const user = value?.numList?.find(u => u?.user_id === item?.user_id && u?.area === 'jackpot');
+  //         // 有用户的下注数据
+  //         if (user) {
+  //           // 是否有彩金用户的彩金数据
+  //           // const numListAreaIndex = value.numList.findIndex(a => a.area === 'jackpot' && a.user_id === item.user_id);
+  //           // 在用户的下注信息里去找彩金相关的信息
+  //           const numListAreaIndex = user?.areaList?.findIndex(a => a.area === 'jackpot' && a.area === item.area && a.user_id === item.user_id);
 
-        // 对numList数组进行排序，area == 'jackpot'的对象排在前面, 排序之后再根据user_id进行排序，大的在后
+  //           if (numListAreaIndex > -1) {
+  //             // 如果有，在用户的下注数据里找彩金用户的下注数据
+  //             user?.areaList.splice(numListAreaIndex, 1, item);
+  //           } else {
+  //             user?.areaList.push({
+  //               ...item,
+  //             }); // 新增一个带 jackpot 属性的对象到 areaList 中
+  //           }
 
-        value.numList.sort((a, b) => {
-          if (a.area === 'jackpot' && b.area !== 'jackpot') return -1;
-          if (a.area !== 'jackpot' && b.area === 'jackpot') return 1;
-          return b.user_id - a.user_id;
-        })
+  //         } else {
+  //           // 没有找到用户，则直接新增
+  //           value.numList.push({
+  //             user_id: item.user_id,
+  //             ...item,
+  //             area: 'jackpot',
+  //             areaList: [item]
+  //           });
+  //         }
+  //       });
+
+  //       console.log(value.numList);
+
+  //       // 删除numList中每个对象中的areaList中的对象，numList中每个对象中的areaList中的对象的area与numList对象的area不一致，则删除该对象
 
 
-      }
-      nnGameList.value.set(key, value);
+  //       // 对numList数组进行排序，area == 'jackpot'的对象排在前面, 排序之后再根据user_id进行排序，大的在后
 
-    }
-  });
+
+  //       // value.numList.sort((a, b) => {
+  //       //   const isJackpotA = a.area === 'jackpot';
+  //       //   const isJackpotB = b.area === 'jackpot';
+
+  //       //   if (isJackpotA && !isJackpotB) return -1;  // jackpot 在前
+  //       //   if (!isJackpotA && isJackpotB) return 1;   // 非 jackpot 在后
+
+  //       //   // 同一类（都是 jackpot 或都不是），按 user_id 升序排
+  //       //   return +a.user_id > +b.user_id;
+  //       // });
+
+  //     }
+
+  //     // value.numList.forEach(item => {
+  //     //   if (item.area === 'jackpot') {
+  //     //     item.areaList = item.areaList.filter(a => a.area === 'jackpot');
+  //     //   }else {
+  //     //     item.areaList = item.areaList.filter(a => a.area !== 'jackpot');
+  //     //   }
+  //     // })
+
+
+  //     nnGameList.value.set(key, value);
+
+  //   // }
+  // });
+
+
 
 
   // ✅ 生成游戏列表并处理满注可见性
@@ -906,10 +1018,42 @@ const constructGameNN = (data) => {
       }
     })
     list.value = list.value.filter(item => item.numList && item.numList.length > 0)
+    list.value = list.value.map(item => {
+      // 为每个用户添加 totalBet 属性
 
+      const uniqueMap = new Map();
+      item.numList.forEach(bet => {
+        const key = `${bet.user_id}_${bet.area}_${bet.num}_${bet.is_cash}_${bet.full_bet}`;
+        if (!uniqueMap.has(key)) {
+          uniqueMap.set(key, bet);
+        }
+      });
+
+      let numList = Array.from(uniqueMap.values());
+
+      numList = numList.map(user => {
+        user.areaList = user.area === 'jackpot'
+          ? user.areaList.filter(i => i.area === 'jackpot')
+          : user.areaList.filter(i => i.area !== 'jackpot');
+        return user;
+      });
+
+      // ✅ 排序逻辑：jackpot 在前，其它按 user_id 升序
+      numList.sort((a, b) => {
+        if (a.area === 'jackpot' && b.area !== 'jackpot') return -1;
+        if (a.area !== 'jackpot' && b.area === 'jackpot') return 1;
+        return a.user_id - b.user_id;
+      });
+
+      return {
+        ...item,
+        numList
+      };
+    });
+    console.log(list.value);
 
     // 计算牛牛限红
-    caculateHightLowRedForNN()
+    // caculateHightLowRedForNN()
   }
 
 
@@ -918,7 +1062,44 @@ const constructGameNN = (data) => {
 
 // 牛牛限红
 function caculateHightLowRedForNN() {
+  //   2.牛牛限红：（如果区域有现金卡，不计算最低限红）
+  // 最高：同个座位的同一区域内所有用户下注的单个币种的所有筹码总和不能超过的值
+  // 最低：同个座位的同一区域内单个用户下注的单个币种的筹码总和不能低于的值
+  const reConstructNnDataByLimitRed = list.value.map(item => {
+    const { num } = item;
+    // 构造用户下注每个币种对应的金额情况
+    const limit = sumAmountsByAreaAndCurrencyByNN(item.numList)
+    // 计算用户下注的每个币种的高限红情况
+    const hightLimitArr = caculateHighLimitByNn(limit, item.area)
 
+  })
+
+}
+
+function caculateHighLimitByNn(limit) {
+  if (Object.keys(limit).length === 0) return [];
+
+  // 对应区域的每个币种的下注金额
+  const giftObj = limit[area]
+
+  const allCurrencyIds = new Set([
+    ...Object.keys(giftObj),
+  ]);
+
+  return Array.from(allCurrencyIds).map((key) => {
+    const areaAmount = giftObj[key]?.amount || 0;
+
+    const highLimit = tableLimit.value.find(
+      item => +item.currency_id == +key
+    )?.limit_contents[`limit_high_${area}`] || 0;
+
+    const isHight = areaAmount > highLimit;
+
+    return {
+      currency_id: key,
+      isHight
+    };
+  });
 }
 
 const handleFullBetData = (gameArray, area, num) => {
@@ -930,7 +1111,7 @@ const handleFullBetData = (gameArray, area, num) => {
       numList: game.numList.map(user => {
         return {
           ...user,
-          areaList: user.areaList.map(a => {
+          areaList: user?.areaList?.map(a => {
             return {
               ...a,
               hiddenByFullBet: a.num == num ? a.fullBetType == 0 : true
