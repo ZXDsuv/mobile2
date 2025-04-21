@@ -159,7 +159,7 @@ const fenzuFn = (info, num) => {
 
           const idx = mergedList.findIndex(u => u.user_id == newUser.user_id && u.area == newUser.area && u.username == newUser.username && u.full_bet == newUser.full_bet && u.num == newUser.num && u.is_cash == newUser.is_cash);
           if (idx !== -1) mergedList[idx] = newUser; // 更新
-          else mergedList.push({...newUser, id: generateId()}); // 追加
+          else mergedList.push({ ...newUser, id: generateId() }); // 追加
 
 
 
@@ -229,6 +229,7 @@ const fenzuFn = (info, num) => {
   caculateLimitRed();
 };
 
+
 const caculateLimitRed = () => {
   //  1.百家乐限红：（如果区域有现金卡，不计算最低限红）
   // 1）庄闲两个位置：
@@ -243,8 +244,10 @@ const caculateLimitRed = () => {
   list.value = list.value.map(item => {
     const limit = sumAmountsByAreaAndCurrency(item.numList)
     const hightLimitArr = caculateHighLimit(limit)
+    // 高限红目前是算整个区域的
+    // 低限红目前是算每个位置的
     const isHight = hightLimitArr.some(item => item.isHight)
-    // 位置有没有cash
+    // 位置有没有cash, 有现金码就不计算最低限红
     const hasCash = item.numList.some(cash => cash.is_cash == 1)
     return {
       ...item,
@@ -265,33 +268,39 @@ const caculateLimitRed = () => {
 
 
 
-  // 公共区域的限红commonArea
-  // commonArea.value = commonArea.value.map(item => {
-  //   const limit = sumAmountsByAreaAndCurrency2(item.numList, item.area)
-  //   const isHight = limit && Object.keys(limit[item.area]).some(key => limit[item.area][key].isHight)
-  //   // 位置有没有cash
-  //   const hasCash = item?.numList?.some(cash => cash.is_cash == 1)
-  //   return {
-  //     ...item,
-  //     limit,
-  //     isHight,
-  //     numList: item?.numList?.map(item => {
-  //       const lowLimit = tableLimit.value.find(
-  //         citem => citem.currency_id == item.currency_id
-  //       )?.limit_contents[`limit_low_${item.area}`] || 0;
-  //       return {
-  //         ...item,
-  //         isLow: hasCash ? false : +item.amount < +lowLimit
-  //       }
-  //     })
-  //   }
-  // })
+
+
 
 
 
 }
 
+// 公共区域的限红
+function caculateHighLimit2(limit = {}, area = '') {
+  if (Object.keys(limit).length === 0) return [];
 
+  // 对应区域的每个币种的下注金额
+  const giftObj = limit[area]
+
+  const allCurrencyIds = new Set([
+    ...Object.keys(giftObj),
+  ]);
+
+  return Array.from(allCurrencyIds).map((key) => {
+    const areaAmount = giftObj[key]?.amount || 0;
+
+    const highLimit = tableLimit.value.find(
+      item => +item.currency_id == +key
+    )?.limit_contents[`limit_high_${area}`] || 0;
+
+    const isHight = areaAmount > highLimit;
+
+    return {
+      currency_id: key,
+      isHight
+    };
+  });
+}
 
 function caculateHighLimit(limit) {
   const { banker = {}, player = {} } = limit;
@@ -305,7 +314,7 @@ function caculateHighLimit(limit) {
     const playerAmount = player[key]?.amount || 0;
 
     const highLimit = tableLimit.value.find(
-      item => item.currency_id == key
+      item => +item.currency_id == +key
     )?.limit_contents?.limit_high || 0;
 
     const isHight = Math.abs(playerAmount - bankerAmount) > highLimit;
@@ -319,7 +328,7 @@ function caculateHighLimit(limit) {
 
 function sumAmountsByAreaAndCurrency2(arr, are) {
   let arr1 = arr?.reduce((acc, item) => {
-    const { area, currency_id, amount } = item;
+    const { area, currency_id, amount, user_id } = item;
 
     if (!acc[area]) {
       acc[area] = {};
@@ -331,7 +340,7 @@ function sumAmountsByAreaAndCurrency2(arr, are) {
       };
     }
 
-    acc[area][currency_id]['amount'] += Number(amount) || 0;
+    user_id > 0 && (acc[area][currency_id]['amount'] += Number(amount) || 0);
     return acc;
   }, {});
 
@@ -348,7 +357,7 @@ function sumAmountsByAreaAndCurrency2(arr, are) {
 
 function sumAmountsByAreaAndCurrency(arr) {
   let arr1 = arr.reduce((acc, item) => {
-    const { area, currency_id, amount } = item;
+    const { area, currency_id, amount, user_id } = item;
 
     if (!acc[area]) {
       acc[area] = {};
@@ -359,7 +368,8 @@ function sumAmountsByAreaAndCurrency(arr) {
         amount: 0
       };
     }
-    if (acc[area][currency_id].user_id > 0) {
+
+    if (user_id > 0) {
       acc[area][currency_id]['amount'] += Number(amount) || 0;
 
     }
@@ -387,14 +397,42 @@ const constructCommonArea = (info) => {
     .map(item => {
       const newItem = { ...item };
       if (item.key === keys) {
-        
-    // 给numList里的每一个对象加上一个唯一的id
+
+        // 给numList里的每一个对象加上一个唯一的id
         newItem.numList = info[keys].map((user, i) => ({ ...user, id: generateId() }));
       }
       return newItem;
     });
 
-   
+  // 公共区域的限红commonArea
+  commonArea.value = commonArea.value.map(item => {
+
+    const limit = sumAmountsByAreaAndCurrency2(item.numList, item.key)
+    // 区域每个币种的高限红情况
+    const hightLimitArr = caculateHighLimit2(limit, item.key)
+
+    const isHight = hightLimitArr.some(item => item.isHight)
+
+    // 位置有没有cash
+    const hasCash = item?.numList?.some(cash => cash.is_cash == 1)
+    return {
+      ...item,
+      limit,
+      isHight,
+      numList: item?.numList?.map(nitem => {
+        const lowLimit = tableLimit.value.find(
+          citem => citem.currency_id == nitem.currency_id
+        )?.limit_contents[`limit_low_${nitem.area}`] || 0;
+        return {
+          ...nitem,
+          lowLimit,
+          isLow: hasCash ? false : +nitem.amount < +lowLimit
+        }
+      })
+    }
+
+  })
+
   giftAll.value = commonArea.value.filter(item => item.numList && item.numList.length > 0)
 
 }
@@ -633,203 +671,6 @@ const openBack = () => {
 let fullType = ref(0);
 let fullList = ref([]);
 
-// const constructGameNN = (data) => {
-//   const { info = [], num, table_id, area, swap, full_bet_type } = data;
-//   // 如果area == common的清空，判断full_bet_type是不是等于3，如果等于3，则把所有数据的fullBetType设置为3
-
-
-//   const numKey = +num;
-//   const numData = nnGameList.value.get(numKey) || {};
-
-//   // 添加 fullBetType 到每条 info 数据
-//   const infoWithType = info.map(item => ({
-//     ...item,
-//     fullBetType: full_bet_type
-//   }));
-
-//   // ✅ 更新当前区域的下注信息
-//   numData[area] = [...infoWithType];
-
-//   // ✅ 构建/更新用户下注数据
-//   let userBetList = numData.numList || [];
-//   console.log(userBetList, "userBetList");
-
-//   infoWithType.forEach(item => {
-//     let user = userBetList.find(u => u.user_id == item.user_id && u.area == item.area && u.num == item.num && u.is_cash == item.is_cash);
-//     console.log(user);
-
-//     if (user) {
-//       const areaIndex = user.areaList.findIndex(a => a.area == area);
-
-//       if (areaIndex > -1) {
-//         // 更新该区域下注
-//         user.areaList.splice(areaIndex, 1, item);
-//       } else {
-//         // 新增该区域下注
-//         user.areaList.push(item);
-//       }
-
-//       item.areaList = user.areaList; // 更新 areaList 引用
-//     } else {
-//       const newUser = {
-//         user_id: item.user_id,
-//         ...item,
-//         areaList: [item]
-//       }
-//       console.log(userBetList, "userBetList", newUser);
-//       userBetList = [...userBetList, newUser];
-//       // userBetList.push({
-//       //   user_id: item.user_id,
-//       //   ...item,
-//       //   areaList: [item]
-//       // });
-
-//     }
-//   });
-
-
-//   // ✅ 如果 info 是空数组，说明该区域被清空了，移除所有用户的对应区域下注
-//   if (info.length === 0) {
-//     userBetList.forEach(user => {
-//       if (user.areaList) {
-//         user.areaList = user.areaList.filter(a => a.area !== area);
-//       }
-//     });
-//   }
-
-//   const tList = userBetList.filter(item => {
-//     if (item.user_id === 0) {
-//       const isNo = numData[item.area]?.some(i => i.user_id === 0)
-//       if (isNo) {
-//         return true
-//       }
-//       return false
-//     }
-//     return true
-//   })
-
-//   // ✅ 更新公共数据
-//   Object.assign(numData, {
-//     swap,
-//     full_bet_type,
-//     table_id,
-//     num: numKey,
-//     numList: tList,
-//     userCount: tList.length
-//   });
-
-//   // ✅ 设置更新回 map
-//   nnGameList.value.set(numKey, numData);
-//   console.log(numKey, "numKey", numData, "numData");
-
-//   // 如果value的jackpot属性是空数组或者没有，需要将value里的numList数组中的area为jackpot的对象删掉
-
-//   // 如果value的jackpot属性的数组长度大于0，那么需要根据jackpot属性的对象数组中的对象的user_id,在value的numList寻找有没有user_id相等且area为jackpot的对象
-//   // .如果有，那么将value的numList中的对象的area为jackpot的对象的全部属性的值替换成value的jackpot属性的对象的全部属性的值;
-//   // 如果没有area == jackpot但是有user_id跟value中的jackpot中的对象的user_id有相同的，则需要在numList中新增一个对象，对象的属性值为原numList数组中对象的user_id与jackpot中对象的user_id相同
-//   // 的全部属性，并且area设置为jackpot，然后更新该areaList，将value中的jackpot属性的对象添加到numList中新增的对象中的areaList中;
-//   // 如果没有area == jackpot且没有user_id跟value中的jackpot中的对象的user_id有相同的，则需要在numList中新增一个对象，对象的属性值为原numList数组中对象的user_id与jackpot中对象的user_id相同的全部属性，并且area设置为jackpot，然后更新该areaList，将value中的jackpot属性的对象添加到numList中新增的对象中的areaList中;
-//   nnGameList.value.forEach((value, key) => {
-//     if (value.jackpot) {
-//       if (value.jackpot.length === 0) {
-//         // 移除 numList 中 area 为 jackpot 的对象
-//         value.numList = value.numList.filter(item => item.area !== 'jackpot');
-
-//       } else {
-//         value.jackpot.forEach(item => {
-//           // 查找是否已有相同 user_id 的用户
-//           const user = value.numList.find(u => u.user_id === item.user_id && u.area === 'jackpot');
-//           if (user) {
-//             const numListAreaIndex = value.numList.findIndex(a => a.area === 'jackpot' && a.user_id === item.user_id);
-//             if (numListAreaIndex > -1) {
-//               const areaIndex = user.areaList?.findIndex(a => a.area === 'jackpot' && a.user_id === item.user_id);
-
-//               user.areaList.splice(areaIndex, 1, item);
-//             } else {
-//               user.areaList.push({
-//                 ...item,
-//                 area: 'jackpot',
-//                 areaList: [item]
-//               }); // 新增一个带 jackpot 属性的对象到 areaList 中
-//             }
-
-//           } else {
-//             // 没有找到用户，则直接新增
-//             value.numList.push({
-//               ...item,
-//               area: 'jackpot',
-//               areaList: [item]
-//             });
-//           }
-//         });
-//         // 删除numList中每个对象中的areaList中的对象，numList中每个对象中的areaList中的对象的area与numList对象的area不一致，则删除该对象
-//         value.numList.forEach(item => {
-//           item.areaList = item.areaList.filter(a => a.area === item.area);
-//         });
-
-//         // 对numList数组进行排序，area == 'jackpot'的对象排在前面, 排序之后再根据user_id进行排序，大的在后
-
-//         value.numList.sort((a, b) => {
-//           if (a.area === 'jackpot' && b.area !== 'jackpot') return -1;
-//           if (a.area !== 'jackpot' && b.area === 'jackpot') return 1;
-//           return b.user_id - a.user_id;
-//         })
-
-
-//       }
-//       nnGameList.value.set(key, value);
-
-//     }
-//   });
-
-
-//   // ✅ 生成游戏列表并处理满注可见性
-//   const gameArray = Array.from(nnGameList.value.values());
-
-//   let fullBetData = handleFullBetData(gameArray, area, num);
-//   // ✅ 计算满注类型
-//   fullType.value = fullBetData.some(i => i.full_bet_type == 3) ? 3 : 0
-//   if (fullType.value == 3 && area === 'common') {
-//     fullList.value = groupBy(info, 'num');
-
-//     // 重新构造数据，将座位彩金相关添加到
-//     // 遍历fullList.value，将fullList.value中的每个对象的numList数组中的对象的area为seat_cash的对象的全部属性的值替换成fullList.value中对象的全部属性的值;
-//     const res = Object.keys(fullList.value).map(key => {
-//       const fullData = fullList.value[key];
-//       const caijinData = fullBetData.find(i => i.num === +key)?.numList?.filter(i => i.area === 'jackpot') || [];
-//       const cashData = []
-//       // 牛牛如果每个座位中的numList中有user_id 为0并且is_cash为 1，则为现金卡，添加到对应座位的fullData中
-//       nnGameList.value.forEach((value, key2) => {
-//         if (key2 === +key) {
-//           const isCash = value.numList?.find(i => i.user_id === 0 && i.is_cash === 1);
-//           if (isCash) {
-//             cashData.push({
-//               ...isCash,
-//             });
-//           }
-//         }
-//       })
-
-//       return {
-//         num: +key,
-//         fullData,
-//         caijinData,
-//         cashData
-//       }
-//     })
-//     fullList.value = res
-
-//   } else {
-//     // ✅ 过滤空数据
-//     list.value = fullBetData.filter(item => item.userCount !== 0);
-//   }
-
-
-//   // list.value = [...gameArray]
-//   console.log(fullBetData, "fullBetData", gameArray);
-
-
-// };
 
 
 const constructGameNN = (data) => {
@@ -913,7 +754,24 @@ const constructGameNN = (data) => {
     });
   }
 
-  const tList = userBetList.filter(item => {
+  // 将userBetList里的旧数据，在info中不存在的删掉
+  //userBetList: 当前座位的所有用户在所有区域的下注信息
+  // info是当前区域当前座位的用户下注信息，是最新的
+  const userBetListFilter = userBetList.filter(user => {
+    const isEqualNum = user.num === num;
+    const isEqualArea = user.area === area;
+    if (isEqualNum && isEqualArea) {
+      return user.areaList.some(a => {
+        return info.some(i => i.user_id == a.user_id && i.area === a.area && i.num === a.num && i.is_cash == a.is_cash);
+      })
+    }
+    return true;
+
+
+  })
+  console.log(userBetList, info, num, area);
+
+  const tList = userBetListFilter.filter(item => {
     if (item.user_id === 0) {
       const isNo = numData[item.area]?.some(i => i.user_id === 0 && i.is_cash === 1 && i.area === item.area)
       if (isNo) {
@@ -1050,12 +908,19 @@ const constructGameNN = (data) => {
     list.value = list.value.filter(item => item.numList && item.numList.length > 0)
 
 
-
+    // 计算牛牛限红
+    caculateHightLowRedForNN()
   }
 
 
 
 };
+
+// 牛牛限红
+function caculateHightLowRedForNN() {
+
+}
+
 const handleFullBetData = (gameArray, area, num) => {
 
   return gameArray.map(game => {
