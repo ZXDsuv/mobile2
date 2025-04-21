@@ -857,26 +857,23 @@ const constructGameNN = (data) => {
     // }
     return true;
   })
-
   const tList = userBetListFilter.filter(item => {
-    // if (item.user_id === 0) {
-    //   const isNo = numData[item.area]?.some(i => i.user_id === 0 && i.is_cash === 1 && i.area === item.area)
-    //   if (isNo) {
-    //     return true
-    //   }
-    //   return false
-    // }
+    
     return true
   })
 
+  const uniqueUserCount = new Set(userBetListFilter.map(user => user.user_id)).size;
+
+  console.log(userBetList);
+  
   // ✅ 更新公共数据
   Object.assign(numData, {
     swap,
     full_bet_type,
     table_id,
     num: numKey,
-    numList: tList,
-    userCount: tList.length
+    numList: userBetListFilter,
+    userCount: uniqueUserCount
   });
 
 
