@@ -357,28 +357,69 @@ function sumAmountsByAreaAndCurrency2(arr, are) {
   return arr1;
 }
 
-function sumAmountsByAreaAndCurrencyByNN(arr) {
-  let arr1 = arr.reduce((acc, item) => {
-    const { area, currency_id, amount, user_id } = item;
+function sumAmountsByAreaAndCurrencyByNN(arr, num) {
+  let arr1 = {};
+  // arr.forEach(arritem => {
+  //   const { user_id, areaList } = arritem;
+  
+  //   arr1 = areaList.reduce((acc, item) => {
+  //     const { area, currency_id, amount } = item;
+  //     if (!acc[area]) {
+  //       acc[area] = {};
+  //     }
 
-    if (!acc[area]) {
-      acc[area] = {};
-    }
+  //     if (!acc[area][currency_id]) {
+  //       acc[area][currency_id] = {
+  //         amount: 0
+  //       };
+  //     }
 
-    if (!acc[area][currency_id]) {
-      acc[area][currency_id] = {
-        amount: 0
-      };
-    }
+  //     if (user_id > 0) {
+  //       acc[area][currency_id]['amount'] += Number(amount) || 0;
 
-    if (user_id > 0) {
-      acc[area][currency_id]['amount'] += Number(amount) || 0;
+  //     }
+  //     return acc;
+  //   }, {});
+  // })
+ arr.forEach(item => {
+    const { user_id, areaList } = item;
+    areaList.forEach(citem => {
+      const { area, currency_id, amount } = citem;
+      if (!arr1[area]) {
+        arr1[area] = {};
+      }
 
-    }
-    return acc;
-  }, {});
+      if (!arr1[area][currency_id]) {
+        arr1[area][currency_id] = {
+          amount: 0
+        }
+      }
+      if (user_id > 0) {
+        arr1[area][currency_id]['amount'] += Number(amount) || 0;
+      }
+    })
 
-  return arr1;
+  })
+
+  
+
+  // 将限红信息添加到每个用户的具体投注上
+  arr.forEach(item => {
+    item.areaList.forEach(aItem => {
+      const highLimit = tableLimit.value.find(
+        item => +item.currency_id == +aItem.currency_id
+      )?.limit_contents[aItem.area === 'equal' ? 'limit_high' : `limit_high_${aItem.area}`] || 0;
+      const lowLimit = tableLimit.value.find(
+        item => +item.currency_id == +aItem.currency_id
+      )?.limit_contents[aItem.area === 'equal'? 'limit_low' : `limit_low_${aItem.area}`] || 0;
+      aItem.isHightLimit = arr1[aItem.area][aItem.currency_id].amount > highLimit; // 假设你已经计算了isHightLimit
+      aItem.isLowLimit = arr1[aItem.area][aItem.currency_id].amount < lowLimit; // 假设你已经计算了isLowLimit
+    })
+  })
+  console.log(arr1);
+  
+  return arr;
+
 }
 
 function sumAmountsByAreaAndCurrency(arr) {
@@ -858,14 +899,13 @@ const constructGameNN = (data) => {
     return true;
   })
   const tList = userBetListFilter.filter(item => {
-    
+
     return true
   })
 
   const uniqueUserCount = new Set(userBetListFilter.map(user => user.user_id)).size;
 
-  console.log(userBetList);
-  
+
   // ✅ 更新公共数据
   Object.assign(numData, {
     swap,
@@ -1047,10 +1087,9 @@ const constructGameNN = (data) => {
         numList
       };
     });
-    console.log(list.value);
 
     // 计算牛牛限红
-    // caculateHightLowRedForNN()
+    caculateHightLowRedForNN(area)
   }
 
 
@@ -1062,14 +1101,21 @@ function caculateHightLowRedForNN() {
   //   2.牛牛限红：（如果区域有现金卡，不计算最低限红）
   // 最高：同个座位的同一区域内所有用户下注的单个币种的所有筹码总和不能超过的值
   // 最低：同个座位的同一区域内单个用户下注的单个币种的筹码总和不能低于的值
-  const reConstructNnDataByLimitRed = list.value.map(item => {
-    const { num } = item;
-    // 构造用户下注每个币种对应的金额情况
-    const limit = sumAmountsByAreaAndCurrencyByNN(item.numList)
-    // 计算用户下注的每个币种的高限红情况
-    const hightLimitArr = caculateHighLimitByNn(limit, item.area)
 
+
+  // 算的是以座位为单位，座位里面各个区域的下注情况
+  list.value = list.value.map(item => {
+    // 构造用户下注每个币种对应的金额情况
+    const limit = sumAmountsByAreaAndCurrencyByNN(item.numList, item.num)
+    // 计算用户下注的每个币种的高限红情况
+    return {
+      ...item,
+      numList: limit
+    }
   })
+
+    console.log( list.value);
+  
 
 }
 

@@ -27,7 +27,7 @@
                                             <view class="user-mes ignore-vh-user-mes color-header"
                                                 :class="{ 'caijin': num.area == 'jackpot', 'nn-pay': num.is_checkout }">
                                                 <span>{{ num.username
-                                                    }}</span>
+                                                }}</span>
                                                 <!-- 换庄图标 -->
                                                 <image v-if="isSwap(num.user_id, item)" class="changeBanker"
                                                     src="@/static/images/index/changeBanker.svg">
@@ -66,7 +66,7 @@
                                             <view class="user-mes ignore-vh-user-mes color-header"
                                                 :class="{ 'caijin': num.area == 'jackpot', 'nn-pay': num.is_checkout }">
                                                 <span class="full-bet">{{ '满注'
-                                                    }}</span>
+                                                }}</span>
                                                 <!-- 换庄图标 -->
                                                 <image v-if="isSwap(num.user_id, item)" class="changeBanker"
                                                     src="@/static/images/index/changeBanker.svg">
@@ -190,6 +190,16 @@
                                                         <image v-if="number.is_checkout" class="checked-icon"
                                                             src="@/static/images/index/right-icon.svg">
                                                         </image>
+                                                        <CustomWarning :active="number.isHightLimit" v-if="number.isHightLimit">
+                                                            <template #content>
+                                                                下注高于限红
+                                                            </template>
+                                                        </CustomWarning>
+                                                        <CustomWarning :active="number.isLowLimit" v-if="number.isLowLimit">
+                                                            <template #content>
+                                                                下注高于限红
+                                                            </template>
+                                                        </CustomWarning>
                                                     </view>
                                                     <!-- 单个区域满注 -->
                                                     <view class="nn-content-item"
