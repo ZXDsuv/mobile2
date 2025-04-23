@@ -197,7 +197,7 @@
                                                         </CustomWarning>
                                                         <CustomWarning :active="number.isLowLimit" v-if="number.isLowLimit">
                                                             <template #content>
-                                                                下注高于限红
+                                                                下注低于限红
                                                             </template>
                                                         </CustomWarning>
                                                     </view>

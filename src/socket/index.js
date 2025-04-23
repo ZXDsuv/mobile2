@@ -2,11 +2,11 @@ import io from 'socket.io-client';
 
 class SocketIOClient {
   constructor() {
-    this.socket = null;
-    this.options = {};
-    this.events = new Map();
-    this.heartbeatTimer = null;
-    this.type = "stream"
+    this.socket = null;               // 保存 socket 实例
+    this.options = {};               // 初始化配置项
+    this.events = new Map();         // 事件列表，记录所有注册的事件
+    this.heartbeatTimer = null;      // 心跳定时器引用
+    this.type = "stream";          // 默认通信类型标识（用于房间功能传参）
   }
 
   /**
@@ -42,9 +42,9 @@ class SocketIOClient {
       socketOptions,
     };
 
-    this.connect();
+    this.connect(); // 建立连接
   }
-
+  // 建立 socket.io 连接
   connect() {
     const {
       url,
@@ -54,88 +54,98 @@ class SocketIOClient {
       onConnect,
       onDisconnect,
     } = this.options;
-    
+    // 创建 socket 实例
     this.socket = io(url, {
       auth,
       query,
       ...socketOptions,
     });
-
+ // 连接成功时的回调
     this.socket.on('connect', () => {
       console.log('✅ Socket.io 已连接:');
-      // this.startHeartbeat();
-      this.rebindEvents();
-      onConnect && onConnect();
+      // this.startHeartbeat(); // 如需自动开启心跳，可取消注释
+      this.rebindEvents(); // 重新绑定事件
+      onConnect && onConnect(); // 执行用户自定义回调
 
     });
-
+  // 连接断开时的回调
     this.socket.on('disconnect', (reason) => {
       console.warn('⚠️ Socket.io 已断开:', reason);
-      this.stopHeartbeat();
-      onDisconnect && onDisconnect(reason);
+      this.stopHeartbeat(); // 停止心跳
+      onDisconnect && onDisconnect(reason);  // 执行断开回调
     });
-
+   // 尝试重连时打印信息
     this.socket.on('reconnect_attempt', (attempt) => {
       console.log(`🔁 第 ${attempt} 次重连...`);
     });
-
+  // 连接出错时打印错误
     this.socket.on('connect_error', (err) => {
       console.error('❌ Socket.io 连接出错:', err);
     });
   }
-
+ // 启动心跳机制
   startHeartbeat() {
     this.stopHeartbeat();
     this.heartbeatTimer = setInterval(() => {
       this.emit('heartbeat', this.options.heartbeatMsg);
     }, this.options.heartbeatInterval);
   }
-
+// 停止心跳
   stopHeartbeat() {
     if (this.heartbeatTimer) {
       clearInterval(this.heartbeatTimer);
       this.heartbeatTimer = null;
     }
   }
-
+  /**
+   * 发送事件
+   * @param {String} event - 事件名
+   * @param {any} data - 发送的数据
+   */
   emit(event, data) {
     if (this.socket?.connected) {
       this.socket.emit(event, data);
-      console.log("挂壁");
-      
     } else {
       console.warn('📭 Socket.io 未连接，无法发送：', event);
     }
   }
-
+  /**
+   * 注册事件监听
+   * @param {String} event - 事件名
+   * @param {Function} callback - 回调函数
+   */
   on(event, callback) {
-    this.events.set(event, callback);
+    this.events.set(event, callback);  // 保存事件和回调
     if (this.socket) {
       console.log('📥 监听事件：', event);
-      this.socket.on(event, callback);
+      this.socket.on(event, callback);  // 注册到 socket 实例
     }
   }
-
+ /**
+   * 移除事件监听
+   * @param {String} event - 事件名
+   * @param {Function} [callBack] - 指定回调（不传则移除之前注册的）
+   */
   off(event, callBack) {
     const callback = callBack || this.events.get(event);
     if (callback && this.socket) {
       console.log('📤 移除事件：', event);
       this.socket.off(event, callback);
     }
-    this.events.delete(event);
+    this.events.delete(event); // 移除事件缓存
   }
-
+  // 重新绑定所有注册的事件（用于断线重连后）
   rebindEvents() {
     this.events.forEach((callback, event) => {
-      this.socket?.off(event);
-      this.socket?.on(event, callback);
+      this.socket?.off(event); // 先移除旧的
+      this.socket?.on(event, callback); // 再重新绑定
     });
   }
-
+ // 主动断开 socket 连接
   close() {
-    this.stopHeartbeat();
-    if (this.socket) {
-      this.socket.disconnect();
+    this.stopHeartbeat(); // 停止心跳
+    if (this.socket) { 
+      this.socket.disconnect();  // 断开连接
       this.socket = null;
       console.log('❎ Socket.io 已断开');
     }
@@ -150,7 +160,7 @@ class SocketIOClient {
   leave(data) {
     this.emit('leave-room', {...data, "source": this.type });  
   }
-
+ // 检查是否已连接
   isConnected() {
     return !!this.socket?.connected;
   }

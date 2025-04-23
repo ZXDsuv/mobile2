@@ -1119,34 +1119,9 @@ function caculateHightLowRedForNN() {
 
 }
 
-function caculateHighLimitByNn(limit) {
-  if (Object.keys(limit).length === 0) return [];
 
-  // 对应区域的每个币种的下注金额
-  const giftObj = limit[area]
-
-  const allCurrencyIds = new Set([
-    ...Object.keys(giftObj),
-  ]);
-
-  return Array.from(allCurrencyIds).map((key) => {
-    const areaAmount = giftObj[key]?.amount || 0;
-
-    const highLimit = tableLimit.value.find(
-      item => +item.currency_id == +key
-    )?.limit_contents[`limit_high_${area}`] || 0;
-
-    const isHight = areaAmount > highLimit;
-
-    return {
-      currency_id: key,
-      isHight
-    };
-  });
-}
 
 const handleFullBetData = (gameArray, area, num) => {
-
   return gameArray.map(game => {
 
     return {
@@ -1171,7 +1146,6 @@ const handleFullBetData = (gameArray, area, num) => {
 
 onMounted(() => {
   calcScrollHeight();
-
   // 初始化
   initData()
 
@@ -1198,6 +1172,15 @@ onShow(() => {
   uni.onWindowResize(() => {
     calcScrollHeight();
   });
+})
+
+onUnmounted(() => {
+  uni.offWindowResize(calcScrollHeight);
+  closeSocketByKey(socketBackType.value)
+  closeSocketByKey('open-result')
+  closeSocketByKey('do-bet-success-back')
+  closeSocketByKey('chip-in-back')
+  socketIO.off('join-room-back');
 })
 
 const closeSocketByKey = (key, event) => {
@@ -1319,8 +1302,6 @@ const closeSocketByKey = (key, event) => {
     flex-shrink: 0;
   }
 
-  .scroll-area {
-    // height: calc(100% - 54px);
-  }
+ 
 }
 </style>
