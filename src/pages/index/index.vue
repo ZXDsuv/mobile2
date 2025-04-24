@@ -64,6 +64,11 @@ let list = ref([])
 
 const scrollHeight = ref(0); // 滚动高度
 
+watch(() => commonArea.value, (newVal) => {
+  console.log(newVal, '--------------------=> commonArea.value');
+
+})
+
 const calcScrollHeight = () => {
   const windowHeight = uni.getSystemInfoSync().windowHeight;
   const query = uni.createSelectorQuery();
@@ -110,6 +115,31 @@ const initData = async () => {
 }
 
 // 通用的合并函数
+function mergeObjectArrayByMultiFields(obj1, obj2, compareFields) {
+  const result = {};
+
+  const allKeys = new Set([...Object.keys(obj1), ...Object.keys(obj2)]);
+
+  allKeys.forEach(k => {
+    const arr1 = obj1[k] || [];
+    const arr2 = obj2[k] || [];
+
+    const toKey = (item) => compareFields.map(field => item[field]).join('|');
+
+    // 构建 Map，以组合字段为 key
+    const map = new Map(arr1.map(item => [toKey(item), item]));
+
+    // 用 obj2 中的项更新或追加
+    arr2.forEach(item => {
+      map.set(toKey(item), item); // obj2 优先
+    });
+
+    result[k] = Array.from(map.values());
+  });
+
+  return result;
+}
+
 
 
 
@@ -117,8 +147,12 @@ const fenzuFn = (info, num) => {
   const { banker, player } = info;
   const bankerData = groupBy(banker, 'num');
   const playerData = groupBy(player, 'num');
+  // 因为mergeList也就是numList最后是计算的每个座位的所有下注，包括庄闲，所以这里做一个合并座位数据的结构
+  // 合并后的结构是这样的：
+  const compareMap = mergeObjectArrayByMultiFields(bankerData, playerData, ['user_id', 'num', 'area', 'is_cash', 'full_bet', 'username'])
   const resultMap = new Map();
 
+  console.log(bankerData, playerData);
 
   // 1. 初始化 resultMap（保留所有 num 的原始数据）
   list.value.forEach(item => {
@@ -163,12 +197,22 @@ const fenzuFn = (info, num) => {
 
 
 
-          // 判断 mergedList 的数据在新数据中是否存在，如果不存在则删除
-          mergedList.forEach((item, index) => {
-            const exist = value.some(u => u.user_id === item.user_id && u.username === item.username && u.num === item.num && u.full_bet === item.full_bet && u.is_cash === item.is_cash && u.area === item.area);
-            if (!exist) mergedList.splice(index, 1);
-          })
+
         });
+
+
+
+        // 判断旧数据中是否存在新数据，如果不存在则删除
+        mergedList.forEach((item, index) => {
+          const { num } = item;
+          const newData = compareMap[num] || [];
+          const existIndex = newData.findIndex(u => u.user_id == item.user_id && u.area == item.area && u.username == item.username && u.full_bet == item.full_bet && u.num == item.num && u.is_cash == item.is_cash);
+          if (existIndex === -1) {
+            // 如果不存在，则删除该元素
+            mergedList.splice(index, 1);
+          }
+        })
+
 
 
         const uniqueUserIds = mergedList
@@ -193,6 +237,7 @@ const fenzuFn = (info, num) => {
   // 3. 更新推送的 banker 和 player 数据
   mergeDataToResultMap(bankerData, 'banker');
   mergeDataToResultMap(playerData, 'player');
+
 
 
 
@@ -223,6 +268,7 @@ const fenzuFn = (info, num) => {
 
   // 4. 直接更新 list.value（保留所有 num）
   list.value = Array.from(resultMap.values());
+  console.log(list.value, 'list.value');
 
 
   // 计算限红
@@ -361,7 +407,7 @@ function sumAmountsByAreaAndCurrencyByNN(arr, num) {
   let arr1 = {};
   // arr.forEach(arritem => {
   //   const { user_id, areaList } = arritem;
-  
+
   //   arr1 = areaList.reduce((acc, item) => {
   //     const { area, currency_id, amount } = item;
   //     if (!acc[area]) {
@@ -381,7 +427,7 @@ function sumAmountsByAreaAndCurrencyByNN(arr, num) {
   //     return acc;
   //   }, {});
   // })
- arr.forEach(item => {
+  arr.forEach(item => {
     const { user_id, areaList } = item;
     areaList.forEach(citem => {
       const { area, currency_id, amount } = citem;
@@ -401,7 +447,7 @@ function sumAmountsByAreaAndCurrencyByNN(arr, num) {
 
   })
 
-  
+
 
   // 将限红信息添加到每个用户的具体投注上
   arr.forEach(item => {
@@ -411,13 +457,13 @@ function sumAmountsByAreaAndCurrencyByNN(arr, num) {
       )?.limit_contents[aItem.area === 'equal' ? 'limit_high' : `limit_high_${aItem.area}`] || 0;
       const lowLimit = tableLimit.value.find(
         item => +item.currency_id == +aItem.currency_id
-      )?.limit_contents[aItem.area === 'equal'? 'limit_low' : `limit_low_${aItem.area}`] || 0;
+      )?.limit_contents[aItem.area === 'equal' ? 'limit_low' : `limit_low_${aItem.area}`] || 0;
       aItem.isHightLimit = arr1[aItem.area][aItem.currency_id].amount > highLimit; // 假设你已经计算了isHightLimit
       aItem.isLowLimit = arr1[aItem.area][aItem.currency_id].amount < lowLimit; // 假设你已经计算了isLowLimit
     })
   })
   console.log(arr1);
-  
+
   return arr;
 
 }
@@ -466,7 +512,7 @@ const constructCommonArea = (info) => {
       if (item.key === keys) {
 
         // 给numList里的每一个对象加上一个唯一的id
-        newItem.numList = info[keys].map((user, i) => ({ ...user, id: generateId() }));
+        newItem.numList = info[keys].map((user, i) => ({ ...user, id: generateId(), bet_id: item?.bet_id }));
       }
       return newItem;
     });
@@ -637,6 +683,7 @@ const openResult = async () => {
   });
 }
 
+
 const openNext = () => {
   // 牛牛
   if (getTableInfo.game_id === 3) {
@@ -648,12 +695,13 @@ const openNext = () => {
   socketIO.on('start-bet', (data) => {
     console.log('开始下注停止下注==》start-bet', data);
     const { status } = data;
+    // 0 结束 1 开始下注 2 停止下注
     if (status == 2) {
       // 注册socket的监听事件
       closeSocketByKey(socketBackType.value, gameIdOneEvent);
       openResult()
 
-    } else {
+    } else if (status == 1) {
       openSocketOnEvent();
 
     }
@@ -662,7 +710,7 @@ const openNext = () => {
 const openDoBet = () => {
   // 在赔付状态中监听赔付结果
   socketIO.on('do-bet-success-back', (data) => {
-    console.log('赔付结果==》do-bet-success-back', data, list.value);
+    console.log('赔付结果==》do-bet-success-back', data, list.value, commonArea.value, giftAll.value);
     const { bet_ids, table_id } = data;
     if (getTableInfo.game_id === 1) {
       // 百家乐
@@ -1114,8 +1162,8 @@ function caculateHightLowRedForNN() {
     }
   })
 
-    console.log( list.value);
-  
+  console.log(list.value);
+
 
 }
 
@@ -1302,6 +1350,6 @@ const closeSocketByKey = (key, event) => {
     flex-shrink: 0;
   }
 
- 
+
 }
 </style>
