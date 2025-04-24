@@ -64,10 +64,7 @@ let list = ref([])
 
 const scrollHeight = ref(0); // 滚动高度
 
-watch(() => commonArea.value, (newVal) => {
-  console.log(newVal, '--------------------=> commonArea.value');
 
-})
 
 const calcScrollHeight = () => {
   const windowHeight = uni.getSystemInfoSync().windowHeight;
@@ -215,11 +212,17 @@ const fenzuFn = (info, num) => {
 
 
 
-        const uniqueUserIds = mergedList
-          .filter(u => u.user_id > -1)
-          .map(u => u.user_id)
+        // const uniqueUserIds = mergedList
+        //   .filter(u => u.user_id > -1)
+        //   .map(u => u.user_id)
 
-
+        const uniqueUserIds = [
+          ...new Set(
+            mergedList
+              .filter(u => u.user_id > -1)
+              .map(u => u.user_id)
+          )
+        ];
         const userCount = uniqueUserIds.length;
 
 
@@ -811,7 +814,9 @@ const constructGameNN = (data) => {
     a.num === b.num &&
     a.user_id === b.user_id &&
     a.is_cash === b.is_cash &&
-    a.full_bet === b.full_bet;
+    a.full_bet === b.full_bet && 
+    a.is_free === b.is_free &&
+    a.is_recover === b.is_recover;
   // ✅ 构建/更新用户下注数据
   // userBetList: 当前座位的所有用户在所有区域的下注信息
   const userBetList = numData.numList || [];
