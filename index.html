@@ -17,6 +17,8 @@
     script.onload = () => {
     // 配置加载完成后，初始化应用
     window.__APP_READY__ = true;
+    console.log("配置加载完成===》？");
+    
     document.dispatchEvent(new Event('config-ready'));
   };
   document.body.appendChild(script);

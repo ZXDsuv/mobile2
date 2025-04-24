@@ -74,7 +74,7 @@
                               { 'nn-pay': number.is_checkout },
                             ]"
                           >
-                            {{ `${number.amount}(${number.count})` }}
+                            {{ `${removeDecimal(number.amount)}(${number.count})` }}
                             <image
                               v-if="number.is_checkout"
                               class="checked-icon"
@@ -135,7 +135,7 @@
                               { 'nn-pay': number.is_checkout },
                             ]"
                           >
-                            {{ `${number.amount}(${number.count})` }}
+                            {{ `${removeDecimal(number.amount)}(${number.count})` }}
                             <image
                               class="checked-icon"
                               v-if="number.is_checkout"
@@ -216,7 +216,7 @@
                           'disable-user-box': num.is_checkout,
                         }"
                       >
-                        {{ `${numberWithCommas(num.amount)}(${num.count})` }}
+                        {{ `${removeDecimal(num.amount)}(${num.count})` }}
                       </view>
                     </template>
                     <!-- 现金 -->
@@ -289,7 +289,7 @@
                               { 'nn-pay': number.is_checkout },
                             ]"
                           >
-                            {{ `${number.amount}(${number.count})` }}
+                            {{ `${removeDecimal(number.amount)}(${number.count})` }}
                             <image
                               v-if="number.is_checkout"
                               class="checked-icon"
@@ -327,7 +327,7 @@
                               { 'nn-pay': num.is_checkout },
                             ]"
                             v-if="num.user_id == 0 && num.full_bet"
-                            >{{ `${num.amount}(${num.count})` }}
+                            >{{ `${removeDecimal(num.amount)}(${num.count})` }}
                             <image
                               v-if="num.is_checkout"
                               class="checked-icon"
@@ -408,7 +408,7 @@
               i.full_bet ? "满注" : i.username
             }}</view>
             <view class="content-content ignore-vh-24">{{
-              `${i.amount}(${i.count})`
+              `${removeDecimal(i.amount)}(${i.count})`
             }}</view>
             <image
               v-if="i.is_checkout"
@@ -444,7 +444,7 @@ import {
 } from "vue";
 
 // tool
-import { numberWithCommas } from "@/utils/tool";
+import { numberWithCommas, removeDecimal  } from "@/utils/tool";
 
 // com
 import CustomWarning from "@/components/CustomWarning/index.vue";
@@ -694,7 +694,7 @@ watch(
       smartUpdateList(list.value, newVal);
       updateTimer = null;
       calculateHeights();
-    }, 1000); // 每 100ms 最多更新一次
+    }, 100); // 每 100ms 最多更新一次
   },
   { deep: true }
 );

@@ -93,15 +93,12 @@ const remot = () => {
 const initData = async () => {
   // 加入房间
 
-  if (socketIO.isConnected()) {
+  // if (socketIO.isConnected()) {
 
-    socketIO.emit('join-room', { table_id: getTableInfo.table_id, source: 'stream' });
+    socketIO.join({ table_id: getTableInfo.table_id});
 
-    socketIO.on('join-room-back', (data) => {
 
-    });
-
-  }
+  // }
   // 获取桌台信息
   const res = await getTableInfoApi({ table_id: getTableInfo.table_id });
   if (res.code !== 200) return;
@@ -149,7 +146,6 @@ const fenzuFn = (info, num) => {
   const compareMap = mergeObjectArrayByMultiFields(bankerData, playerData, ['user_id', 'num', 'area', 'is_cash', 'full_bet', 'username'])
   const resultMap = new Map();
 
-  console.log(bankerData, playerData);
 
   // 1. 初始化 resultMap（保留所有 num 的原始数据）
   list.value.forEach(item => {
@@ -465,7 +461,6 @@ function sumAmountsByAreaAndCurrencyByNN(arr, num) {
       aItem.isLowLimit = arr1[aItem.area][aItem.currency_id].amount < lowLimit; // 假设你已经计算了isLowLimit
     })
   })
-  console.log(arr1);
 
   return arr;
 
@@ -1167,7 +1162,6 @@ function caculateHightLowRedForNN() {
     }
   })
 
-  console.log(list.value);
 
 
 }
@@ -1198,6 +1192,8 @@ const handleFullBetData = (gameArray, area, num) => {
 
 
 onMounted(() => {
+  console.log("初始化", getTableInfo);
+  
   calcScrollHeight();
   // 初始化
   initData()
