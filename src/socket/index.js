@@ -122,11 +122,21 @@ class SocketIOClient {
    * @param {Function} callback - 回调函数
    */
   on(event, callback) {
-    this.events.set(event, callback); // 保存事件和回调
-    if (this.socket) {
-      console.log('📥 监听事件：', event);
-      this.socket.on(event, callback); // 注册到 socket 实例
-    }
+   
+
+      // 如果之前已经注册过，先解绑
+  const oldCallback = this.events.get(event);
+  if (oldCallback && this.socket) {
+    this.socket.off(event, oldCallback);
+    console.log(`🔄 已移除旧监听器：${event}`);
+  }
+
+  // 更新回调引用 & 注册新的监听器
+  this.events.set(event, callback);
+  if (this.socket) {
+    console.log('📥 监听事件：', event);
+    this.socket.on(event, callback);
+  }
   }
   /**
    * 移除事件监听

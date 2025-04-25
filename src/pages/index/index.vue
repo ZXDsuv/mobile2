@@ -555,7 +555,6 @@ function generateId() {
 
 // 百家乐下注事件
 const gameIdOneEvent = (data) => {
-
   const { info, num, table_id } = data;
 
   if (getTableInfo.game_id === 1) {
@@ -620,19 +619,18 @@ const reConsctruct = (bet) => {
 
 
   } else {
+    if(list.value.length === 0) return;
     // 牛牛
     list.value = list.value.map(item => {
-      const betInfo = bet.find(be => be.num == item.num)
 
       // 存在相关座位下注信息
-      if (betInfo) {
         return {
           ...item,
           numList: item.numList.map(user => {
             return {
               ...user,
               areaList: user.areaList.map(a => {
-                const betAreaInfo = bet.find(areaInfo => areaInfo.area == a.area && areaInfo.user_id == a.user_id && areaInfo.num == a.num && areaInfo.is_cash == a.is_cash);
+                const betAreaInfo = bet.find(areaInfo => areaInfo.area == a.area && areaInfo.user_id == a.user_id && areaInfo.num == a.num && areaInfo.is_cash == a.is_cash && areaInfo.full_bet == a.full_bet && areaInfo.username == a.username && arraysEqualIgnoreOrder(a.tags, areaInfo.tags));
 
                 return {
                   ...a,
@@ -642,12 +640,8 @@ const reConsctruct = (bet) => {
             }
           })
         }
-      }
-      return {
-        ...item
-      }
     })
-    console.log("重组牛牛", list.value);
+    console.log("重组牛牛", list.value, bet);
     nnGameList.value.forEach((value, key) => {
       // 在这里更新 value
       const updatedValue = list.value.find(item => item.num == key);
@@ -687,7 +681,7 @@ const openNext = () => {
   if (getTableInfo.game_id === 3) {
     // 由下注状态进入赔付状态
     openResult()
-  }
+  }else {
 
   // 由下注状态进入赔付状态
   socketIO.on('start-bet', (data) => {
@@ -704,7 +698,14 @@ const openNext = () => {
 
     }
   });
+  }
+
 }
+
+watch(() => list.value, (newVal) => {
+  console.log('list.value',newVal);
+  
+})
 const openDoBet = () => {
   // 在赔付状态中监听赔付结果
   socketIO.on('do-bet-success-back', (data) => {
@@ -746,6 +747,7 @@ const openDoBet = () => {
     }
 
     if (getTableInfo.game_id === 3) {
+      if(list.value.length === 0 || bet_ids?.length === 0) return;
       list.value = list.value.map(item => {
         return {
           ...item,
@@ -775,7 +777,6 @@ const openBack = () => {
   socketIO.on('chip-in-back', (data) => {
     console.log('由赔付状态返回下注状态==》chip-in-back', data);
     openSocketOnEvent();
-    openResult()
   });
 
 
@@ -858,7 +859,7 @@ const constructGameNN = (data) => {
       const existingIndex = user?.areaList?.findIndex(a => isSameBet(a, item));
       if (existingIndex > -1) {
         // 更新原下注
-        user.areaList.splice(existingIndex, 1, { ...user.areaList[existingIndex], ...item });
+        user.areaList.splice(existingIndex, 1, { ...user.areaList[existingIndex], ...item, bet_id: user?.areaList[existingIndex]?.bet_id });
       } else {
         // 新增下注记录
         user.areaList.push(item);
@@ -1135,7 +1136,8 @@ const constructGameNN = (data) => {
         numList
       };
     });
-
+    console.log("jiance=============>?", list.value);
+    
     // 计算牛牛限红
     caculateHightLowRedForNN(area)
   }
@@ -1207,7 +1209,6 @@ onMounted(() => {
 onHide(() => {
   uni.offWindowResize(calcScrollHeight);
   closeSocketByKey(socketBackType.value)
-  closeSocketByKey('open-result')
   closeSocketByKey('do-bet-success-back')
   closeSocketByKey('chip-in-back')
 
