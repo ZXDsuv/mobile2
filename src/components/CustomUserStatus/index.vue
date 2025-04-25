@@ -317,6 +317,18 @@
                               >
                                 <template #content>彩金区域只能一人下注</template>
                               </CustomWarning>
+                              <CustomWarning
+                                :active="number.amount > 10"
+                                v-if="number.amount > 10"
+                              >
+                                <template #content>下注超过限红</template>
+                              </CustomWarning>
+                              <CustomWarning
+                                :active="number.amount < 10"
+                                v-if="number.amount < 10"
+                              >
+                                <template #content>下注低于限红</template>
+                              </CustomWarning>
                             </template>
                           </view>
                           <!-- 单个区域满注 -->

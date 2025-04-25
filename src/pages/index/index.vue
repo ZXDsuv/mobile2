@@ -63,7 +63,7 @@ const socketBackType = computed(() => {
 let list = ref([])
 
 const scrollHeight = ref(0); // 滚动高度
-
+const startBet = ref(true); // 起始下注
 
 
 const calcScrollHeight = () => {
@@ -95,7 +95,7 @@ const initData = async () => {
 
   // if (socketIO.isConnected()) {
 
-    socketIO.join({ table_id: getTableInfo.table_id});
+  socketIO.join({ table_id: getTableInfo.table_id });
 
 
   // }
@@ -267,7 +267,6 @@ const fenzuFn = (info, num) => {
 
   // 4. 直接更新 list.value（保留所有 num）
   list.value = Array.from(resultMap.values());
-  console.log(list.value, 'list.value');
 
 
   // 计算限红
@@ -325,6 +324,7 @@ const caculateLimitRed = () => {
 // 公共区域的限红
 function caculateHighLimit2(limit = {}, area = '') {
   if (Object.keys(limit).length === 0) return [];
+  const areaInclude = ['banker_pair', 'player_pair'];
 
   // 对应区域的每个币种的下注金额
   const giftObj = limit[area]
@@ -338,7 +338,7 @@ function caculateHighLimit2(limit = {}, area = '') {
 
     const highLimit = tableLimit.value.find(
       item => +item.currency_id == +key
-    )?.limit_contents[`limit_high_${area}`] || 0;
+    )?.limit_contents[areaInclude.includes(area) ? `limit_high_pair` : `limit_high_${area}`] || 0;
 
     const isHight = areaAmount > highLimit;
 
@@ -374,6 +374,8 @@ function caculateHighLimit(limit) {
 }
 
 function sumAmountsByAreaAndCurrency2(arr, are) {
+  // 庄对闲对用庄闲的限红
+  const areaInclude = ['banker_pair', 'player_pair'];
   let arr1 = arr?.reduce((acc, item) => {
     const { area, currency_id, amount, user_id } = item;
 
@@ -395,7 +397,7 @@ function sumAmountsByAreaAndCurrency2(arr, are) {
   if (arr1?.[are] && typeof arr1[are] === 'object') {
     Object.keys(arr1[are]).forEach(key => {
       const amount = arr1[are][key].amount;
-      const limit = tableLimit.value.find(item => item.currency_id == key)?.limit_contents?.[`limit_high_${are}`] || 0;
+      const limit = tableLimit.value.find(item => item.currency_id == key)?.limit_contents?.[areaInclude.includes(are) ? `limit_high_pair` : `limit_high_${are}`] || 0;
       arr1[are][key].isHight = +amount > +limit;
     });
   }
@@ -514,6 +516,7 @@ const constructCommonArea = (info) => {
       }
       return newItem;
     });
+  const areaInclude = ['banker_pair', 'player_pair'];
 
   // 公共区域的限红commonArea
   commonArea.value = commonArea.value.map(item => {
@@ -522,7 +525,7 @@ const constructCommonArea = (info) => {
     // 区域每个币种的高限红情况
     const hightLimitArr = caculateHighLimit2(limit, item.key)
 
-    const isHight = hightLimitArr.some(item => item.isHight)
+    const isHight = hightLimitArr.some(item => item.isHight == true)
 
     // 位置有没有cash
     const hasCash = item?.numList?.some(cash => cash.is_cash == 1)
@@ -533,7 +536,7 @@ const constructCommonArea = (info) => {
       numList: item?.numList?.map(nitem => {
         const lowLimit = tableLimit.value.find(
           citem => citem.currency_id == nitem.currency_id
-        )?.limit_contents[`limit_low_${nitem.area}`] || 0;
+        )?.limit_contents[areaInclude.includes(nitem.area) ? `limit_low_pair` : `limit_low_${nitem.area}`] || 0;
         return {
           ...nitem,
           lowLimit,
@@ -549,7 +552,7 @@ const constructCommonArea = (info) => {
 }
 
 function generateId() {
-  return crypto.randomUUID(); // 现代浏览器支持
+  return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).substr(2, 9);
 }
 
 
@@ -569,6 +572,7 @@ const gameIdOneEvent = (data) => {
   } else if (getTableInfo.game_id === 3) {
     // 牛牛
     constructGameNN(data);
+
   }
 
 }
@@ -581,6 +585,7 @@ const openSocketOnEvent = () => {
   // 下注状态
   socketIO.on(socketBackType.value, gameIdOneEvent);
   openNext()
+  openStartAndEnd()
 
 
 }
@@ -619,27 +624,27 @@ const reConsctruct = (bet) => {
 
 
   } else {
-    if(list.value.length === 0) return;
+    if (list.value.length === 0) return;
     // 牛牛
     list.value = list.value.map(item => {
 
       // 存在相关座位下注信息
-        return {
-          ...item,
-          numList: item.numList.map(user => {
-            return {
-              ...user,
-              areaList: user.areaList.map(a => {
-                const betAreaInfo = bet.find(areaInfo => areaInfo.area == a.area && areaInfo.user_id == a.user_id && areaInfo.num == a.num && areaInfo.is_cash == a.is_cash && areaInfo.full_bet == a.full_bet && areaInfo.username == a.username && arraysEqualIgnoreOrder(a.tags, areaInfo.tags));
+      return {
+        ...item,
+        numList: item.numList.map(user => {
+          return {
+            ...user,
+            areaList: user.areaList.map(a => {
+              const betAreaInfo = bet.find(areaInfo => areaInfo.area == a.area && areaInfo.user_id == a.user_id && areaInfo.num == a.num && areaInfo.is_cash == a.is_cash && areaInfo.full_bet == a.full_bet && areaInfo.username == a.username && arraysEqualIgnoreOrder(a.tags, areaInfo.tags));
 
-                return {
-                  ...a,
-                  ...(betAreaInfo ? { ...betAreaInfo } : {}), // 如果没有找到对应的下注信息，设置为0
-                };
-              })
-            }
-          })
-        }
+              return {
+                ...a,
+                ...(betAreaInfo ? { ...betAreaInfo } : {}), // 如果没有找到对应的下注信息，设置为0
+              };
+            })
+          }
+        })
+      }
     })
     console.log("重组牛牛", list.value, bet);
     nnGameList.value.forEach((value, key) => {
@@ -681,7 +686,7 @@ const openNext = () => {
   if (getTableInfo.game_id === 3) {
     // 由下注状态进入赔付状态
     openResult()
-  }else {
+  }
 
   // 由下注状态进入赔付状态
   socketIO.on('start-bet', (data) => {
@@ -698,14 +703,30 @@ const openNext = () => {
 
     }
   });
-  }
 
 }
 
-watch(() => list.value, (newVal) => {
-  console.log('list.value',newVal);
-  
-})
+//开始和结束
+const openStartAndEnd = () => {
+  // 由下注状态进入赔付状态
+  socketIO.on('jackpot-led', (data) => {
+    console.log('开始下注停止下注==》jackpot-led-back', data);
+    const { action } = data;
+    if (action === 'startBet') {
+      // 开始
+      openSocketOnEvent();
+      startBet.value = true;
+    }
+    if (action === 'endBet') {
+      // 结束
+      closeSocketByKey(socketBackType.value, gameIdOneEvent);
+      openResult()
+      startBet.value = false;
+    }
+  })
+}
+
+
 const openDoBet = () => {
   // 在赔付状态中监听赔付结果
   socketIO.on('do-bet-success-back', (data) => {
@@ -747,7 +768,7 @@ const openDoBet = () => {
     }
 
     if (getTableInfo.game_id === 3) {
-      if(list.value.length === 0 || bet_ids?.length === 0) return;
+      if (list.value.length === 0 || bet_ids?.length === 0) return;
       list.value = list.value.map(item => {
         return {
           ...item,
@@ -788,8 +809,10 @@ let fullList = ref([]);
 
 
 const constructGameNN = (data) => {
+  if(startBet.value === false) return;
   const { info = [], num, table_id, area, swap, full_bet_type } = data;
   // 如果area == common的清空，判断full_bet_type是不是等于3，如果等于3，则把所有数据的fullBetType设置为3
+  console.log("监听1------");
 
   // 座位号 
   const numKey = +num;
@@ -810,7 +833,7 @@ const constructGameNN = (data) => {
     a.num === b.num &&
     a.user_id === b.user_id &&
     a.is_cash === b.is_cash &&
-    a.full_bet === b.full_bet && 
+    a.full_bet === b.full_bet &&
     a.is_free === b.is_free &&
     a.is_recover === b.is_recover;
   // ✅ 构建/更新用户下注数据
@@ -1136,8 +1159,7 @@ const constructGameNN = (data) => {
         numList
       };
     });
-    console.log("jiance=============>?", list.value);
-    
+
     // 计算牛牛限红
     caculateHightLowRedForNN(area)
   }
@@ -1163,6 +1185,10 @@ function caculateHightLowRedForNN() {
       numList: limit
     }
   })
+
+  // 对list.value进行排序，num从小到大排序
+  list.value.sort((a, b) => a.num - b.num);
+
 
 
 
@@ -1194,8 +1220,7 @@ const handleFullBetData = (gameArray, area, num) => {
 
 
 onMounted(() => {
-  console.log("初始化", getTableInfo);
-  
+
   calcScrollHeight();
   // 初始化
   initData()

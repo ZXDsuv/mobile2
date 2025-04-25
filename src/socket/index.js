@@ -6,6 +6,8 @@ class SocketIOClient {
     this.options = {}; // 初始化配置项
     this.events = new Map(); // 事件列表，记录所有注册的事件
     this.heartbeatTimer = null; // 心跳定时器引用
+    this.roomEvents = new Map(); // 房间事件映射表 {roomId: {event: callback}}
+    this.pendingRoomJoins = new Map(); // 待处理的房间加入请求 {roomId: joinData}
     this.joinQueue = []; // 加入房间的请求队列
     this.type = "stream"; // 默认通信类型标识（用于房间功能传参）
   }
@@ -66,6 +68,8 @@ class SocketIOClient {
     this.socket.on('connect', () => {
       console.log('✅ Socket.io 已连接:');
       // this.startHeartbeat(); // 如需自动开启心跳，可取消注释
+       // 1. 先处理所有等待中的加入房间请求
+       this.processPendingRoomJoins();
       this.rebindEvents(); // 重新绑定事件
       onConnect && onConnect(); // 执行用户自定义回调
       // 🔁 处理等待中的加入房间请求
@@ -90,6 +94,22 @@ class SocketIOClient {
       console.error('❌ Socket.io 连接出错:', err);
     });
   }
+
+    // 处理待处理的房间加入请求
+    processPendingRoomJoins() {
+      this.pendingRoomJoins.forEach((joinData, roomId) => {
+        console.log(`🔁 重新加入房间 ${roomId}`, joinData);
+        this.emit('join-room', joinData);
+        
+        // 加入房间后绑定相关事件
+        const events = this.roomEvents.get(roomId);
+        if (events) {
+          Object.entries(events).forEach(([event, callback]) => {
+            this.socket?.on(event, callback);
+          });
+        }
+      });
+    }
   // 启动心跳机制
   startHeartbeat() {
     this.stopHeartbeat();
@@ -123,7 +143,7 @@ class SocketIOClient {
    */
   on(event, callback) {
    
-
+    
       // 如果之前已经注册过，先解绑
   const oldCallback = this.events.get(event);
   if (oldCallback && this.socket) {
@@ -133,6 +153,14 @@ class SocketIOClient {
 
   // 更新回调引用 & 注册新的监听器
   this.events.set(event, callback);
+
+      // 如果指定了房间ID，将事件与房间关联
+      // if (roomId) {
+      //   if (!this.roomEvents.has(roomId)) {
+      //     this.roomEvents.set(roomId, {});
+      //   }
+      //   this.roomEvents.get(roomId)[event] = callback;
+      // }
   if (this.socket) {
     console.log('📥 监听事件：', event);
     this.socket.on(event, callback);
@@ -154,8 +182,8 @@ class SocketIOClient {
   // 重新绑定所有注册的事件（用于断线重连后）
   rebindEvents() {
     this.events.forEach((callback, event) => {
-      this.socket ?.off(event); // 先移除旧的
-      this.socket ?.on(event, callback); // 再重新绑定
+      this.socket?.off(event); // 先移除旧的
+      this.socket?.on(event, callback); // 再重新绑定
     });
   }
   // 主动断开 socket 连接
@@ -167,13 +195,18 @@ class SocketIOClient {
       console.log('❎ Socket.io 已断开');
     }
   }
-
+  
   // 加入房间
   join(data) {
     const joinData = {
       ...data,
       source: this.type
     };
+
+    // 保存加入房间请求
+    if (data.table_id) {
+      this.pendingRoomJoins.set(data.table_id, joinData);
+    }
     if (this.isConnected()) {
       console.log("✅ 已连接，直接加入房间:", joinData);
       this.emit('join-room', joinData);
