@@ -1269,7 +1269,7 @@ const closeSocketByKey = (key, event) => {
 .index-page-container {
   width: 100%;
   height: 100%;
-  background-image: url('@/static/images/index/logo.svg'), url('@/static/images/index/bg.svg');
+  background-image: url('/static/images/index/logo.svg'), url('@/static/images/index/bg.svg');
   background-repeat: no-repeat, no-repeat;
   background-position: center center, center center;
   background-size: 25%, cover;
