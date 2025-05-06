@@ -188,5 +188,23 @@ export default {
             contentHeight: 0,
             containerHeight: 0
         },
+        {
+            label: '幸运7',
+            key: 'luck_seven',
+            id: 'luck_seven',
+            className: 'gift-7',
+            scrollSpeed: 0,
+            contentHeight: 0,
+            containerHeight: 0
+        },
+        {
+            label: '超级幸运7',
+            key: 'luck_seven_super',
+            id: 'luck_seven_super',
+            className: 'gift-7',
+            scrollSpeed: 0,
+            contentHeight: 0,
+            containerHeight: 0
+        },
     ]
 }
