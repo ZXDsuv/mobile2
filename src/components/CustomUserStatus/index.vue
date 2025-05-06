@@ -722,7 +722,7 @@ watch(
       updateCommonTimer = null;
 
       calculateHeights2();
-    }, 1000); // 每 100ms 最多更新一次
+    }, 100); // 每 100ms 最多更新一次
   },
   { deep: true }
 );
